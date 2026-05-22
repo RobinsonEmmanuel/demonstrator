@@ -1,0 +1,8 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+torch>=2.2.0
+transformers>=4.46.0,<6.0.0
+pillow>=10.4.0
+pydantic>=2.9.0
+# Optionnel si vous utilisez AutoProcessor (non requis avec SiglipImageProcessor)
+# sentencepiece>=0.2.0

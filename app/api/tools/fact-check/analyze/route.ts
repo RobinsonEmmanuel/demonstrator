@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/server/request-auth';
 import { extractFieldsFromText, attachFieldSpans } from '@/lib/server/field-extract';
 import { verifyFieldsWithSonar } from '@/lib/server/fact-check-perplexity';
+import {
+  parseDatabaseJsonInput,
+  verifyFieldsAgainstDatabase,
+} from '@/lib/server/fact-check-database';
 import type { FactCheckAnalyzeResponse, FactVerificationResult } from '@/types/fact-check';
 
 export async function POST(request: NextRequest) {
@@ -15,12 +19,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Texte assistant vide' }, { status: 400 });
     }
 
+    const dbParse = parseDatabaseJsonInput(body.databaseJson);
+    const hasDatabaseInput =
+      body.databaseJson !== undefined &&
+      body.databaseJson !== null &&
+      (typeof body.databaseJson !== 'string' || body.databaseJson.trim() !== '');
+
     const fields = await extractFieldsFromText(assistantText);
     if (fields.length === 0) {
       const empty: FactCheckAnalyzeResponse = {
         fields: [],
         spans: [],
         verificationById: {},
+        databaseVerificationById: {},
+        hasDatabaseCheck: false,
+        databaseJsonError: dbParse.ok ? undefined : dbParse.error,
         grounding_sources: [],
         consulted_sources: [],
         extractedCount: 0,
@@ -28,6 +41,22 @@ export async function POST(request: NextRequest) {
         unplacedIds: [],
       };
       return NextResponse.json(empty);
+    }
+
+    let databaseVerificationById: Record<string, FactVerificationResult> = {};
+    let hasDatabaseCheck = false;
+    let databaseJsonError: string | undefined;
+
+    if (hasDatabaseInput) {
+      if (!dbParse.ok) {
+        databaseJsonError = dbParse.error;
+      } else {
+        const dbResults = await verifyFieldsAgainstDatabase(fields, dbParse.data);
+        for (const r of dbResults) {
+          if (r.id) databaseVerificationById[r.id] = r;
+        }
+        hasDatabaseCheck = true;
+      }
     }
 
     const {
@@ -52,6 +81,9 @@ export async function POST(request: NextRequest) {
       fields,
       spans,
       verificationById,
+      databaseVerificationById: hasDatabaseCheck ? databaseVerificationById : undefined,
+      hasDatabaseCheck,
+      databaseJsonError,
       grounding_sources,
       consulted_sources,
       place: {

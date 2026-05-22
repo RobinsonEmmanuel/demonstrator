@@ -73,7 +73,13 @@ export interface FactCheckPlaceContext {
 export interface FactCheckAnalyzeResponse {
   fields: ExtractedField[];
   spans: SpanFact[];
+  /** Niveau 2 — vérification web (Perplexity) */
   verificationById: Record<string, FactVerificationResult>;
+  /** Niveau 1 — vérification référentiel JSON (si fourni) */
+  databaseVerificationById?: Record<string, FactVerificationResult>;
+  /** true si un JSON BDD valide a été fourni et analysé */
+  hasDatabaseCheck?: boolean;
+  databaseJsonError?: string;
   grounding_sources: GroundingSource[];
   /** Sites de confiance interrogés (toutes passes Perplexity + points cités) */
   consulted_sources: ConsultedSource[];

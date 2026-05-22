@@ -44,11 +44,6 @@ export function ImageCard({
             Recommandée
           </span>
         )}
-        {image.overallRank === 1 && (
-          <span className="absolute top-2 right-2 text-[10px] font-bold bg-slate-900/80 text-white px-1.5 py-0.5 rounded">
-            ★ Hero
-          </span>
-        )}
         <span className="absolute bottom-2 right-2 text-xs font-bold bg-white/90 text-gray-900 px-1.5 py-0.5 rounded">
           {a.aesthetic.overall}/10
         </span>

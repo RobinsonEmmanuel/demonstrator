@@ -3,6 +3,7 @@
 import type { FactVerificationResult } from '@/types/fact-check';
 
 const SOURCE_TYPE_CFG: Record<string, { label: string; color: string }> = {
+  database: { label: 'Base de données', color: 'bg-violet-100 text-violet-800' },
   official: { label: 'Officiel', color: 'bg-emerald-100 text-emerald-700' },
   institutional: { label: 'Institutionnel', color: 'bg-teal-100 text-teal-700' },
   media_high: { label: 'Presse inter.', color: 'bg-blue-100 text-blue-700' },

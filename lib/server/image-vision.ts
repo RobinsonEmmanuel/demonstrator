@@ -2,7 +2,26 @@ import 'server-only';
 
 import { createOpenAI } from '@/lib/server/openai-client';
 import { visionModel } from '@/lib/server/vision-model';
-import type { ImageAnalysis, ImageClassifyContext } from '@/types/image-classify';
+import type {
+  CompositionType,
+  ImageAnalysis,
+  ImageClassifyContext,
+} from '@/types/image-classify';
+
+const VALID_COMPOSITION_TYPES: CompositionType[] = [
+  'wide_exterior',
+  'framed_view',
+  'architectural_detail',
+  'interior_scene',
+  'panorama',
+  'people_focus',
+  'other',
+];
+
+function normalizeCompositionType(raw: unknown): CompositionType {
+  const v = String(raw ?? '').trim() as CompositionType;
+  return VALID_COMPOSITION_TYPES.includes(v) ? v : 'other';
+}
 
 function cleanJson(s: string): string {
   let c = s.trim();
@@ -29,6 +48,14 @@ Analyse cette image et réponds UNIQUEMENT en JSON valide (sans markdown).
 - shortDescription : 1 phrase normalisée pour détecter les doublons — indique TOUJOURS le sujet principal, le cadrage (ex. « vue frontale château au-dessus de l'eau »), la météo/lumière, et tout élément gênant au premier plan (main, personne, objet). Deux photos du même lieu au même angle doivent avoir des descriptions très proches.
 - fullDescription : description détaillée 3–6 phrases
 - sceneType : exterior | interior | detail | food | panorama | night | people | other
+- compositionType : type de cadrage pour la détection de doublons (choisir UNE valeur) :
+  - wide_exterior : vue large du lieu (monument + environnement, rivière, parc, façade entière)
+  - framed_view : sujet vu à travers un cadre (fenêtre, porte, arcade, arche) — NE PAS confondre avec wide_exterior
+  - architectural_detail : gros plan sur un élément (statue, rosace, escalier, détail de façade)
+  - interior_scene : intérieur (salle, galerie, hall)
+  - panorama : panorama très large / format paysage étendu
+  - people_focus : personnes clairement au centre de la composition
+  - other : si aucune catégorie ne convient
 - tags : 5–12 tags courts (français), type fiche POI (façade, salle, vue, accès PMR…)
 - suggestedCaption : légende éditoriale courte
 - notablePoints : [{ "label": "élément visible", "region": "avant-plan|centre|arrière-plan" }]
@@ -63,6 +90,7 @@ Format :
   "shortDescription": "...",
   "fullDescription": "...",
   "sceneType": "exterior",
+  "compositionType": "wide_exterior",
   "tags": ["..."],
   "suggestedCaption": "...",
   "notablePoints": [],
@@ -97,6 +125,7 @@ function normalizeAnalysis(raw: Record<string, unknown>): ImageAnalysis {
     shortDescription: String(raw.shortDescription ?? ''),
     fullDescription: String(raw.fullDescription ?? ''),
     sceneType: (raw.sceneType as ImageAnalysis['sceneType']) ?? 'other',
+    compositionType: normalizeCompositionType(raw.compositionType),
     tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
     suggestedCaption: raw.suggestedCaption ? String(raw.suggestedCaption) : undefined,
     notablePoints: Array.isArray(raw.notablePoints)

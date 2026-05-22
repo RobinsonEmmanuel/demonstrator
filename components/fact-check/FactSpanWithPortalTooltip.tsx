@@ -9,8 +9,8 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import type { FactVerificationResult } from '@/types/fact-check';
-import { FieldValidationBlock } from '@/components/fact-check/FieldValidationBlock';
-import { highlightClass } from '@/components/fact-check/FactHoverCard';
+import { DualLevelFieldValidation } from '@/components/fact-check/VerificationLevelSection';
+import { highlightClassDual } from '@/lib/fact-check-verification-utils';
 
 const GAP = 8;
 const PAD = 12;
@@ -60,10 +60,14 @@ function computeTooltipLayout(rect: DOMRect): {
 
 export function FactSpanWithTooltip({
   children,
-  verification,
+  webVerification,
+  databaseVerification,
+  hasDatabaseCheck = false,
 }: {
   children: React.ReactNode;
-  verification?: FactVerificationResult;
+  webVerification?: FactVerificationResult;
+  databaseVerification?: FactVerificationResult;
+  hasDatabaseCheck?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [layout, setLayout] = useState<ReturnType<typeof computeTooltipLayout> | null>(null);
@@ -125,7 +129,10 @@ export function FactSpanWithTooltip({
         onMouseLeave={scheduleClose}
       >
         <span
-          className={`cursor-help rounded-sm px-0.5 transition-colors ${highlightClass(verification)}`}
+          className={`cursor-help rounded-sm px-0.5 transition-colors ${highlightClassDual(
+            hasDatabaseCheck ? databaseVerification : undefined,
+            webVerification
+          )}`}
         >
           {children}
         </span>
@@ -147,7 +154,11 @@ export function FactSpanWithTooltip({
             onMouseEnter={clearLeaveTimer}
             onMouseLeave={scheduleClose}
           >
-            <FieldValidationBlock verification={verification} />
+            <DualLevelFieldValidation
+              showDatabase={hasDatabaseCheck}
+              databaseVerification={databaseVerification}
+              webVerification={webVerification}
+            />
           </div>,
           document.body
         )}

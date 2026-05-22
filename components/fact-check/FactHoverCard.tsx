@@ -3,6 +3,7 @@
 import type { FactVerificationResult } from '@/types/fact-check';
 
 const SOURCE_TYPE_CFG: Record<string, { label: string; color: string }> = {
+  database: { label: 'Base de données', color: 'bg-violet-100 text-violet-800' },
   official: { label: 'Officiel', color: 'bg-emerald-100 text-emerald-700' },
   institutional: { label: 'Institutionnel', color: 'bg-teal-100 text-teal-700' },
   media_high: { label: 'Presse inter.', color: 'bg-blue-100 text-blue-700' },
@@ -128,13 +129,7 @@ const PANEL_HEADER: Record<
   },
 };
 
-export function highlightClass(v?: FactVerificationResult): string {
-  const kind = getPanelKind(v);
-  if (kind === 'invalid') return 'border-b-2 border-red-500 bg-red-50/95';
-  if (kind === 'uncertain') return 'border-b-2 border-amber-500 bg-amber-50/95';
-  if (kind === 'valid') return 'border-b-2 border-emerald-500 bg-emerald-50/95';
-  return 'border-b-2 border-dashed border-slate-400 bg-slate-50/90';
-}
+export { highlightClass, highlightClassDual } from '@/lib/fact-check-verification-utils';
 
 export function FactHoverCard({ verification: v }: { verification?: FactVerificationResult }) {
   const kind = getPanelKind(v);

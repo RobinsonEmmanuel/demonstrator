@@ -6,7 +6,7 @@ import { useRequireAuth } from '@/lib/use-require-auth';
 import {
   ShieldCheckIcon,
   PhotoIcon,
-  CircleStackIcon,
+  MegaphoneIcon,
   ArrowRightIcon,
 } from '@heroicons/react/24/outline';
 
@@ -26,11 +26,11 @@ const tools = [
     icon: PhotoIcon,
   },
   {
-    href: '/tools/database-fill',
-    title: 'Remplissage de base de données',
+    href: '/tools/social-watch',
+    title: 'Veille réseaux sociaux',
     description:
-      'Extraction structurée et insertion assistée — démonstration à venir.',
-    icon: CircleStackIcon,
+      'Repérez les posts Facebook de vos membres et engagez-vous avec l’aide de l’IA.',
+    icon: MegaphoneIcon,
   },
 ];
 

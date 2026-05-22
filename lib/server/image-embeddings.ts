@@ -42,7 +42,22 @@ export interface ClusterBySimilarityOptions {
   bridgeThreshold?: number;
   minTagOverlap?: number;
   sceneTypes?: string[];
+  /** Cadrage / point de vue — doit être identique pour regrouper (sauf "other"). */
+  compositionTypes?: string[];
   tagsByIndex?: string[][];
+}
+
+function sameCompositionForGrouping(
+  compositionTypes: string[] | undefined,
+  i: number,
+  j: number
+): boolean {
+  if (!compositionTypes) return true;
+  const a = compositionTypes[i];
+  const b = compositionTypes[j];
+  if (!a || !b) return true;
+  if (a === 'other' || b === 'other') return true;
+  return a === b;
 }
 
 /** Regroupe les images par similarité sémantique (descriptions + pont scène/tags). */
@@ -60,6 +75,7 @@ export function clusterBySimilarity(
   const bridgeThreshold = opts.bridgeThreshold ?? 0.78;
   const minTagOverlap = opts.minTagOverlap ?? 2;
   const sceneTypes = opts.sceneTypes;
+  const compositionTypes = opts.compositionTypes;
   const tagsByIndex = opts.tagsByIndex;
 
   const n = ids.length;
@@ -79,6 +95,10 @@ export function clusterBySimilarity(
 
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
+      if (!sameCompositionForGrouping(compositionTypes, i, j)) {
+        continue;
+      }
+
       const sim = cosineSimilarity(embeddings[i], embeddings[j]);
       if (sim >= threshold) {
         union(i, j);

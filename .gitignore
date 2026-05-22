@@ -12,3 +12,11 @@ out
 
 # debug
 npm-debug.log*
+
+# build / cache
+tsconfig.tsbuildinfo
+
+# python (SigLIP service)
+.venv
+__pycache__/
+*.pyc

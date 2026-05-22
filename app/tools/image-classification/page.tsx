@@ -145,8 +145,8 @@ export default function ImageClassificationPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Classification d&apos;images</h1>
             <p className="text-gray-600 mt-1">
-              Chargement → analyse vision → doublons → scoring esthétique (4 critères) → conformité
-              RGPD / éditoriale → détail et tags au clic.
+              Chargement → embedding SigLIP (Mongo) → doublons visuels → analyse vision → scoring
+              esthétique → conformité → comparaison détaillée au clic.
             </p>
           </div>
         </div>
@@ -258,12 +258,11 @@ export default function ImageClassificationPage() {
 
           {result && (
             <>
-              {result.heroImageId && imagesById.get(result.heroImageId) && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                  <strong>Image hero recommandée :</strong>{' '}
-                  {imagesById.get(result.heroImageId)!.name} (score{' '}
-                  {imagesById.get(result.heroImageId)!.analysis.aesthetic.overall}/10, conformité{' '}
-                  {imagesById.get(result.heroImageId)!.analysis.compliance.status})
+              {result.siglipMocked && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Mode mock SigLIP actif — les doublons visuels ne sont pas fiables. Définissez{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">SIGLIP_SERVICE_URL</code>{' '}
+                  dans .env.local.
                 </div>
               )}
 
@@ -355,19 +354,11 @@ export default function ImageClassificationPage() {
       </div>
 
       {selectedImage && selectedId && previewById.get(selectedId) && (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 bg-black/30 z-40"
-            aria-label="Fermer le détail"
-            onClick={() => setSelectedId(null)}
-          />
-          <ImageDetailPanel
-            image={selectedImage}
-            previewUrl={previewById.get(selectedId)!}
-            onClose={() => setSelectedId(null)}
-          />
-        </>
+        <ImageDetailPanel
+          image={selectedImage}
+          previewUrl={previewById.get(selectedId)!}
+          onClose={() => setSelectedId(null)}
+        />
       )}
     </AppShell>
   );

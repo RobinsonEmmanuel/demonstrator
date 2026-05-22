@@ -6,7 +6,7 @@ import {
   HomeIcon,
   ShieldCheckIcon,
   PhotoIcon,
-  CircleStackIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline';
 import { getCurrentUser, logout } from '@/lib/auth';
 
@@ -14,7 +14,7 @@ const menuItems = [
   { name: 'Accueil', icon: HomeIcon, href: '/' },
   { name: 'Fact checking', icon: ShieldCheckIcon, href: '/tools/fact-checking' },
   { name: 'Classification images', icon: PhotoIcon, href: '/tools/image-classification' },
-  { name: 'Remplissage BDD', icon: CircleStackIcon, href: '/tools/database-fill' },
+  { name: 'Veille réseaux sociaux', icon: MegaphoneIcon, href: '/tools/social-watch' },
 ];
 
 export default function AppSidebar() {
