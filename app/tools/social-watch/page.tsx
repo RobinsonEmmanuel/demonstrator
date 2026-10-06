@@ -223,6 +223,12 @@ function PostCard({ post }: { post: SocialPost }) {
       <p className="mt-2 text-sm text-gray-800 whitespace-pre-wrap line-clamp-6">
         {post.text || '(sans texte)'}
       </p>
+      {post.imageText && (
+        <details className="mt-2 rounded border border-gray-100 bg-gray-50 px-2 py-1 text-xs text-gray-700">
+          <summary className="cursor-pointer font-medium text-gray-600">Lu sur l&apos;image</summary>
+          <p className="mt-1 whitespace-pre-wrap">{post.imageText}</p>
+        </details>
+      )}
       {post.postUrl && (
         <a
           href={post.postUrl}
@@ -327,6 +333,7 @@ export default function SocialWatchPage() {
   const [scrapedMeta, setScrapedMeta] = useState<{
     at: string;
     pages: number;
+    imagesRead?: number;
   } | null>(null);
 
   const [analysis, setAnalysis] = useState<SocialAnalyzeResponse | null>(null);
@@ -386,7 +393,11 @@ export default function SocialWatchPage() {
       const data = (await res.json()) as SocialScrapeResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || 'Échec de la collecte');
       setPosts(data.posts);
-      setScrapedMeta({ at: data.scrapedAt, pages: data.facebookPagesScraped });
+      setScrapedMeta({
+        at: data.scrapedAt,
+        pages: data.facebookPagesScraped + (data.instagramProfilesScraped ?? 0),
+        imagesRead: data.imagesRead,
+      });
     } catch (e) {
       setPosts([]);
       setScrapeError(e instanceof Error ? e.message : 'Erreur collecte');
@@ -575,7 +586,8 @@ export default function SocialWatchPage() {
           {scrapedMeta && (
             <p className="mt-3 text-xs text-gray-500">
               {posts.length} post{posts.length > 1 ? 's' : ''} —{' '}
-              {scrapedMeta.pages} page{scrapedMeta.pages > 1 ? 's' : ''} —{' '}
+              {scrapedMeta.pages} compte{scrapedMeta.pages > 1 ? 's' : ''} —{' '}
+              {scrapedMeta.imagesRead != null && <>{scrapedMeta.imagesRead} image{scrapedMeta.imagesRead > 1 ? 's' : ''} lue{scrapedMeta.imagesRead > 1 ? 's' : ''} — </>}
               {formatDate(scrapedMeta.at)}
             </p>
           )}

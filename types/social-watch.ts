@@ -15,6 +15,10 @@ export type SocialPost = {
   poiId?: string;
   poiName?: string;
   text: string;
+  /** Images de la publication (URL signées, éphémères). */
+  imageUrls?: string[];
+  /** Texte et description lus sur les images par le modèle de vision. */
+  imageText?: string;
   publishedAt: string;
   likes?: number;
   comments?: number;
@@ -46,6 +50,8 @@ export type SocialScrapeResponse = {
   scrapedAt: string;
   facebookPagesScraped: number;
   instagramProfilesScraped?: number;
+  imagesRead?: number;
+  imagesFailed?: number;
 };
 
 export type SitDbUpdateSuggestion = {

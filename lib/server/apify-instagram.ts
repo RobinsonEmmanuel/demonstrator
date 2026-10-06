@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getApifyToken, postsNewerThanSevenDays } from '@/lib/server/apify-facebook';
+import { extractImageUrls } from '@/lib/server/social-image-urls';
 import type { SocialPost } from '@/types/social-watch';
 
 /** Même actor que veilleur (app/apify.py → ACTOR_POSTS_IG), forme d'entrée éprouvée là-bas. */
@@ -96,6 +97,7 @@ export async function scrapeInstagramPosts(accounts: IgAccount[]): Promise<Socia
       poiId: linked?.poiId,
       poiName: linked?.poiName ?? owner,
       text,
+      imageUrls: extractImageUrls(item),
       publishedAt: toIso(item),
       likes: pickNumber(item, ['likesCount', 'likes']),
       comments: pickNumber(item, ['commentsCount', 'comments']),
