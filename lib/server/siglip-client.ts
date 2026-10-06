@@ -31,7 +31,56 @@ function mockEmbeddingFromDataUrl(dataUrl: string, dims = DEFAULT_DIMS): number[
   return normalizeVector(v);
 }
 
+/** RunPod Serverless (même endpoint que visior) : POST /runsync puis polling /status. */
+async function embedViaRunpod(dataUrl: string): Promise<SiglipEmbedResult> {
+  const endpointId = process.env.RUNPOD_SIGLIP_ENDPOINT_ID!.trim();
+  const apiKey = process.env.RUNPOD_API_KEY?.trim();
+  if (!apiKey) throw new Error('RUNPOD_API_KEY manquant');
+
+  const base = `https://api.runpod.ai/v2/${endpointId}`;
+  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+  const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+
+  const res = await fetch(`${base}/runsync`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ input: { operation: 'embed_image', image_base64: b64 } }),
+    signal: AbortSignal.timeout(180_000),
+  });
+  let data = (await res.json()) as {
+    id?: string;
+    status?: string;
+    error?: string;
+    output?: { embedding?: number[]; model?: string };
+  };
+
+  // Cold start : runsync peut renvoyer IN_QUEUE / IN_PROGRESS -> polling
+  const deadline = Date.now() + 170_000;
+  while (data.status === 'IN_QUEUE' || data.status === 'IN_PROGRESS') {
+    if (!data.id || Date.now() > deadline) throw new Error('RunPod : job non terminé (timeout)');
+    await new Promise((r) => setTimeout(r, 2000));
+    const pr = await fetch(`${base}/status/${data.id}`, { headers, signal: AbortSignal.timeout(10_000) });
+    data = await pr.json();
+  }
+  if (data.status === 'FAILED' || data.error) {
+    throw new Error(`RunPod : ${data.error ?? 'job failed'}`);
+  }
+  const emb = data.output?.embedding;
+  if (!Array.isArray(emb) || emb.length === 0) {
+    throw new Error('Réponse RunPod invalide (embedding manquant)');
+  }
+  return {
+    embedding: normalizeVector(emb),
+    model: data.output?.model || 'runpod-siglip',
+    dims: emb.length,
+  };
+}
+
 export async function embedImageFromDataUrl(dataUrl: string): Promise<SiglipEmbedResult> {
+  if (process.env.RUNPOD_SIGLIP_ENDPOINT_ID?.trim()) {
+    return embedViaRunpod(dataUrl);
+  }
+
   const baseUrl = process.env.SIGLIP_SERVICE_URL?.trim();
   const allowMock = process.env.SIGLIP_MOCK === 'true';
 

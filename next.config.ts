@@ -6,7 +6,7 @@ const require = createRequire(path.join(__dirname, "package.json"));
 
 const nextConfig: NextConfig = {
   /** Monorepo : un package-lock à la racine + celui du workspace ; évite l'avertissement Next sur la racine « tracing » */
-  outputFileTracingRoot: path.join(__dirname, ".."),
+  outputFileTracingRoot: process.env.RAILWAY_ENVIRONMENT ? __dirname : path.join(__dirname, ".."),
   /** SDK OpenAI côté Node uniquement — évite des erreurs Webpack du type « __webpack_modules__ is not a function ». */
   serverExternalPackages: ["openai"],
   experimental: {

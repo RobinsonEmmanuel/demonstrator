@@ -9,7 +9,7 @@ import type {
   UpsertImageInput,
 } from '@/types/image-store';
 
-const COLLECTION = 'images';
+const COLLECTION = process.env.MONGODB_IMAGES_COLLECTION?.trim() || 'images';
 
 async function collection(): Promise<Collection<StoredImageRecord>> {
   const db = await getMongoDb();

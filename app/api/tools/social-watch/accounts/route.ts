@@ -6,11 +6,30 @@ import {
   filterDraftsByPoiIds,
 } from '@/lib/sit-online-presence';
 import { getSocialWatchPoiFilter } from '@/lib/server/social-watch-config';
+import {
+  SOCIAL_WATCH_DEMO_CLUSTER_ID,
+  getDemoSocialAccounts,
+  getDemoSocialPoiIds,
+  useDemoSocialAccounts,
+} from '@/lib/server/social-watch-demo';
 import type { SocialAccountsResponse } from '@/types/social-watch';
 
 export async function GET(request: NextRequest) {
   try {
     requireAuth(request);
+
+    if (useDemoSocialAccounts()) {
+      const demoAccounts = getDemoSocialAccounts();
+      const demoPayload: SocialAccountsResponse = {
+        clusterId: SOCIAL_WATCH_DEMO_CLUSTER_ID,
+        accounts: demoAccounts,
+        facebookCount: demoAccounts.filter((a) => a.platform === 'facebook').length,
+        filterMode: 'demo',
+        poiFilter: getDemoSocialPoiIds(),
+      };
+      return NextResponse.json(demoPayload);
+    }
+
     const { ids: poiFilter, mode: filterMode } = getSocialWatchPoiFilter();
     const { clusterId, drafts } = await fetchClusterDraftsRaw();
     const filteredDrafts = filterDraftsByPoiIds(drafts, poiFilter);

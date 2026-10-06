@@ -16,6 +16,18 @@ import type {
   SocialWatchFilterMode,
 } from '@/types/social-watch';
 
+/** Nom du compte à partir de l'URL (ex. facebook.com/p/Paléospace-1000… → Paléospace). */
+function accountHandle(url: string): string {
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean);
+    let seg = parts[0] === 'p' && parts[1] ? parts[1] : parts[parts.length - 1] ?? url;
+    seg = decodeURIComponent(seg).replace(/-\d{8,}$/, '');
+    return seg.startsWith('@') ? seg : `@${seg}`;
+  } catch {
+    return url;
+  }
+}
+
 const PLATFORM_LABEL: Record<string, string> = {
   facebook: 'Facebook',
   linkedin: 'LinkedIn',
@@ -317,6 +329,15 @@ export default function SocialWatchPage() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const facebookAccounts = accounts.filter((a) => a.platform === 'facebook');
+  const accountsByPoi = Object.values(
+    accounts.reduce<
+      Record<string, { poiId: string; poiName: string; facebook?: string; instagram?: string }>
+    >((acc, a) => {
+      const row = (acc[a.poiId] ??= { poiId: a.poiId, poiName: a.poiName });
+      if (a.platform === 'facebook' || a.platform === 'instagram') row[a.platform] = a.url;
+      return acc;
+    }, {})
+  );
   const step1Done = accounts.length > 0 && !accountsLoading;
   const step2Done = posts.length > 0;
   const step3Done = analysis != null;
@@ -455,10 +476,16 @@ export default function SocialWatchPage() {
             1. Comptes réseaux sociaux du cluster
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Extraction depuis le bloc SIT{' '}
-            <code className="text-xs bg-gray-100 px-1 rounded">online_presence</code>
-            {clusterId && (
-              <span className="text-gray-400"> — cluster {clusterId}</span>
+            {filterMode === 'demo' ? (
+              <>Comptes de la démo (fichier partenaires Deauville)</>
+            ) : (
+              <>
+                Extraction depuis le bloc SIT{' '}
+                <code className="text-xs bg-gray-100 px-1 rounded">online_presence</code>
+                {clusterId && (
+                  <span className="text-gray-400"> — cluster {clusterId}</span>
+                )}
+              </>
             )}
           </p>
 
@@ -477,27 +504,33 @@ export default function SocialWatchPage() {
                   <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500">
                     <tr>
                       <th className="px-3 py-2">Lieu</th>
-                      <th className="px-3 py-2">Réseau</th>
-                      <th className="px-3 py-2">URL</th>
+                      <th className="px-3 py-2">Facebook</th>
+                      <th className="px-3 py-2">Instagram</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {accounts.map((a) => (
-                      <tr key={`${a.poiId}-${a.platform}`} className="hover:bg-gray-50/80">
-                        <td className="px-3 py-2 font-medium text-gray-900">{a.poiName}</td>
-                        <td className="px-3 py-2 text-gray-600">
-                          {PLATFORM_LABEL[a.platform] ?? a.platform}
-                        </td>
-                        <td className="px-3 py-2">
-                          <a
-                            href={a.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-orange-600 hover:underline truncate block max-w-xs"
-                          >
-                            {a.url.replace(/^https?:\/\//, '')}
-                          </a>
-                        </td>
+                    {accountsByPoi.map((row) => (
+                      <tr key={row.poiId} className="hover:bg-gray-50/80">
+                        <td className="px-3 py-2 font-medium text-gray-900">{row.poiName}</td>
+                        {(['facebook', 'instagram'] as const).map((platform) => {
+                          const url = row[platform];
+                          return (
+                            <td key={platform} className="px-3 py-2">
+                              {url ? (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-orange-600 hover:underline"
+                                >
+                                  {accountHandle(url)}
+                                </a>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
