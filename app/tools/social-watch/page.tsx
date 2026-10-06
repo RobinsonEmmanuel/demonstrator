@@ -563,9 +563,6 @@ export default function SocialWatchPage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 2. Posts Facebook et Instagram (7 derniers jours)
               </h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Collecte via Apify — max. 5 posts par page, tri chronologique.
-              </p>
             </div>
             <button
               type="button"
