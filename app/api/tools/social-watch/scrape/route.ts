@@ -7,6 +7,7 @@ import {
   filterDraftsByPoiIds,
 } from '@/lib/sit-online-presence';
 import { getSocialWatchPoiFilter } from '@/lib/server/social-watch-config';
+import { getDemoSocialAccounts, useDemoSocialAccounts } from '@/lib/server/social-watch-demo';
 import type { SocialScrapeResponse } from '@/types/social-watch';
 
 export async function POST(request: NextRequest) {
@@ -21,6 +22,12 @@ export async function POST(request: NextRequest) {
     }
 
     let facebookPages = body.facebookUrls;
+
+    if (!facebookPages?.length && useDemoSocialAccounts()) {
+      facebookPages = getDemoSocialAccounts()
+        .filter((a) => a.platform === 'facebook')
+        .map((a) => ({ url: a.url, poiId: a.poiId, poiName: a.poiName }));
+    }
 
     if (!facebookPages?.length) {
       const { ids: poiFilter } = getSocialWatchPoiFilter();
