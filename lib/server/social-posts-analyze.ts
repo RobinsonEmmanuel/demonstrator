@@ -11,6 +11,7 @@ import type {
 type LlmEngagementOutput = {
   picks?: Array<{
     postId?: string;
+    summary?: string;
     reaction?: string;
     justification?: string;
     suggestedComment?: string;
@@ -58,8 +59,10 @@ function normalizePicks(
       typeof pick.justification === 'string' ? pick.justification.trim() : '';
     if (!justification) continue;
 
+    const summary = typeof pick.summary === 'string' ? pick.summary.trim() : '';
     const item: SocialPostPick = {
       postId: pick.postId,
+      ...(summary ? { summary } : {}),
       reaction,
       justification,
     };
@@ -68,7 +71,7 @@ function normalizePicks(
       if (c) item.suggestedComment = c;
     }
     normalized.push(item);
-    if (normalized.length >= 10) break;
+    if (normalized.length >= MAX_PICKS) break;
   }
 
   return normalized;
@@ -279,7 +282,7 @@ function normalizeDbUpdates(
     );
   }
 
-  return normalized.slice(0, MAX_PICKS);
+  return normalized;
 }
 
 export async function analyzeSocialPosts(
@@ -307,7 +310,7 @@ export async function analyzeSocialPosts(
 Les posts viennent de Facebook et d'Instagram (champ "platform"). Le champ "imageText" est le texte et la description lus sur les images du post : tiens-en compte (une affiche d'événement, un menu ou un prix peut être uniquement dans l'image).
 Sélectionne EXACTEMENT les 5 posts les plus pertinents avec lesquels interagir (like ou commentaire), classés du plus au moins pertinent ; moins de 5 seulement s'il n'y en a pas assez de valables. Privilégie la diversité des lieux (pas deux posts du même établissement sauf nécessité).
 
-JSON attendu : { "picks": [ { "postId", "reaction": "like"|"comment", "justification", "suggestedComment"? } ] }
+JSON attendu : { "picks": [ { "postId", "summary" (résumé fidèle du post en 1 à 2 phrases, image comprise, sans jugement), "reaction": "like"|"comment", "justification", "suggestedComment"? } ] }
 
 Posts :
 ${JSON.stringify(compactPosts)}`;
