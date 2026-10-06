@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
-import { MegaphoneIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import {
+  MegaphoneIcon,
+  ClipboardDocumentIcon,
+  HandThumbUpIcon,
+  HandThumbDownIcon,
+} from '@heroicons/react/24/outline';
 import { useRequireAuth } from '@/lib/use-require-auth';
 import { authFetch } from '@/lib/api-client';
 import type {
@@ -12,6 +17,7 @@ import type {
   SocialAnalyzeResponse,
   SocialPost,
   SocialPostPick,
+  SocialPickActionStatus,
   SocialScrapeResponse,
   SocialWatchFilterMode,
 } from '@/types/social-watch';
@@ -101,7 +107,13 @@ function FieldValueBox({
   );
 }
 
-function PostSourceDetails({ post }: { post: SocialPost }) {
+function PostSourceDetails({
+  post,
+  label = 'Post source',
+}: {
+  post: SocialPost;
+  label?: string;
+}) {
   return (
     <details className="mt-3 rounded-md border border-gray-200 bg-gray-50/90">
       <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100/80 list-none [&::-webkit-details-marker]:hidden">
@@ -109,7 +121,7 @@ function PostSourceDetails({ post }: { post: SocialPost }) {
           <span className="text-[10px] text-gray-400" aria-hidden>
             ▶
           </span>
-          Post source
+          {label}
         </span>
       </summary>
       <div className="border-t border-gray-200 px-3 py-3 space-y-2">
@@ -128,6 +140,11 @@ function PostSourceDetails({ post }: { post: SocialPost }) {
         <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">
           {post.text || '(sans texte)'}
         </p>
+        {post.imageText && (
+          <p className="rounded bg-gray-50 px-2 py-1.5 text-xs text-gray-600 whitespace-pre-wrap">
+            <span className="font-medium">Lu sur l&apos;image :</span> {post.imageText}
+          </p>
+        )}
         {post.postUrl ? (
           <a
             href={post.postUrl}
@@ -279,10 +296,19 @@ function DbUpdateCard({
 function PickCard({
   pick,
   post,
+  status,
+  saveError,
+  onStatus,
 }: {
   pick: SocialPostPick;
   post?: SocialPost;
+  status: SocialPickActionStatus | null;
+  saveError?: string;
+  onStatus: (next: SocialPickActionStatus | null) => void;
 }) {
+  const summary = pick.summary || (post?.text ? post.text.slice(0, 220) : '');
+  const toggle = (value: SocialPickActionStatus) => onStatus(status === value ? null : value);
+
   return (
     <article className="rounded-lg border border-orange-200 bg-orange-50/40 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -298,12 +324,25 @@ function PickCard({
         {post?.poiName && (
           <span className="text-sm font-medium text-gray-900">{post.poiName}</span>
         )}
+        {post?.platform === 'instagram' && (
+          <span className="rounded bg-pink-100 px-1.5 py-0.5 text-xs font-medium text-pink-700">
+            Instagram
+          </span>
+        )}
+        {post?.publishedAt && (
+          <span className="text-xs text-gray-500">{formatDate(post.publishedAt)}</span>
+        )}
       </div>
-      <p className="mt-2 text-sm text-gray-800">{pick.justification}</p>
+
+      {/* 1. Résumé du post + accordéon post complet */}
+      {summary && <p className="mt-3 text-sm text-gray-900">{summary}</p>}
+      {post && <PostSourceDetails post={post} label="Voir le post complet" />}
+
+      {/* 2. Commentaire proposé */}
       {pick.reaction === 'comment' && pick.suggestedComment && (
         <div className="mt-3 rounded-md border border-orange-200 bg-white p-3">
           <p className="text-xs font-medium text-gray-500 mb-1">
-            Commentaire proposé (Facebook)
+            Commentaire proposé ({post?.platform === 'instagram' ? 'Instagram' : 'Facebook'})
           </p>
           <p className="text-sm text-gray-900 whitespace-pre-wrap">
             {pick.suggestedComment}
@@ -313,7 +352,55 @@ function PickCard({
           </div>
         </div>
       )}
-      {post && <PostSourceDetails post={post} />}
+
+      {/* 3. Pourquoi ce post */}
+      <details className="mt-3 rounded-md border border-gray-200 bg-white/70">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100/80 list-none [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex items-center gap-2">
+            <span className="text-[10px] text-gray-400" aria-hidden>
+              ▶
+            </span>
+            Pourquoi ce post ?
+          </span>
+        </summary>
+        <p className="border-t border-gray-200 px-3 py-3 text-sm text-gray-800">
+          {pick.justification}
+        </p>
+      </details>
+
+      {/* 4. Suite donnée (statistiques de l'office) */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-orange-100 pt-3">
+        <span className="text-xs font-medium text-gray-500">Avez-vous suivi cette recommandation ?</span>
+        <button
+          type="button"
+          onClick={() => toggle('followed')}
+          aria-pressed={status === 'followed'}
+          aria-label="J'ai réagi"
+          title="J'ai réagi"
+          className={`rounded-full border p-2 transition ${
+            status === 'followed'
+              ? 'border-emerald-600 bg-emerald-600 text-white'
+              : 'border-gray-300 bg-white text-gray-500 hover:border-emerald-400 hover:text-emerald-600'
+          }`}
+        >
+          <HandThumbUpIcon className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => toggle('ignored')}
+          aria-pressed={status === 'ignored'}
+          aria-label="Recommandation non suivie"
+          title="Recommandation non suivie"
+          className={`rounded-full border p-2 transition ${
+            status === 'ignored'
+              ? 'border-gray-700 bg-gray-700 text-white'
+              : 'border-gray-300 bg-white text-gray-500 hover:border-gray-500 hover:text-gray-800'
+          }`}
+        >
+          <HandThumbDownIcon className="h-5 w-5" />
+        </button>
+        {saveError && <span className="text-xs text-red-700">{saveError}</span>}
+      </div>
     </article>
   );
 }
@@ -326,6 +413,9 @@ export default function SocialWatchPage() {
   const [poiFilter, setPoiFilter] = useState<string[] | undefined>();
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [accountsError, setAccountsError] = useState<string | null>(null);
+
+  const [pickStatus, setPickStatus] = useState<Record<string, SocialPickActionStatus>>({});
+  const [pickSaveError, setPickSaveError] = useState<Record<string, string>>({});
 
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [scrapeLoading, setScrapeLoading] = useState(false);
@@ -380,10 +470,68 @@ export default function SocialWatchPage() {
     void loadAccounts();
   }, [ready, loadAccounts]);
 
-  const handleScrape = async () => {
+  const loadPickStatuses = async (postIds: string[]) => {
+    setPickStatus({});
+    setPickSaveError({});
+    if (postIds.length === 0) return;
+    try {
+      const res = await authFetch(
+        `/api/tools/social-watch/actions?ids=${encodeURIComponent(JSON.stringify(postIds))}`
+      );
+      if (!res.ok) return;
+      const data = (await res.json()) as { actions?: Record<string, SocialPickActionStatus> };
+      setPickStatus(data.actions ?? {});
+    } catch {
+      /* statuts précédents indisponibles : on repart de zéro */
+    }
+  };
+
+  const savePickStatus = async (pick: SocialPostPick, next: SocialPickActionStatus | null) => {
+    const post = analysis?.postsById[pick.postId];
+    const previous = pickStatus[pick.postId] ?? null;
+    const apply = (value: SocialPickActionStatus | null) =>
+      setPickStatus((cur) => {
+        const copy = { ...cur };
+        if (value) copy[pick.postId] = value;
+        else delete copy[pick.postId];
+        return copy;
+      });
+
+    apply(next);
+    setPickSaveError((cur) => ({ ...cur, [pick.postId]: '' }));
+    try {
+      const res = await authFetch('/api/tools/social-watch/actions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: pick.postId,
+          status: next,
+          poiId: post?.poiId,
+          poiName: post?.poiName,
+          platform: post?.platform,
+          postUrl: post?.postUrl,
+          publishedAt: post?.publishedAt,
+          recommendedReaction: pick.reaction,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || 'Enregistrement impossible');
+      }
+    } catch (e) {
+      apply(previous);
+      setPickSaveError((cur) => ({
+        ...cur,
+        [pick.postId]: e instanceof Error ? e.message : 'Enregistrement impossible',
+      }));
+    }
+  };
+
+  const handleScrape = async (): Promise<SocialPost[] | null> => {
     setScrapeLoading(true);
     setScrapeError(null);
     setAnalysis(null);
+    let scrapedPosts: SocialPost[] | null = null;
     try {
       const res = await authFetch('/api/tools/social-watch/scrape', {
         method: 'POST',
@@ -393,6 +541,7 @@ export default function SocialWatchPage() {
       const data = (await res.json()) as SocialScrapeResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || 'Échec de la collecte');
       setPosts(data.posts);
+      scrapedPosts = data.posts;
       setScrapedMeta({
         at: data.scrapedAt,
         pages: data.facebookPagesScraped + (data.instagramProfilesScraped ?? 0),
@@ -404,20 +553,22 @@ export default function SocialWatchPage() {
     } finally {
       setScrapeLoading(false);
     }
+    return scrapedPosts;
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (postsToAnalyze: SocialPost[] = posts) => {
     setAnalyzeLoading(true);
     setAnalyzeError(null);
     try {
       const res = await authFetch('/api/tools/social-watch/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ posts }),
+        body: JSON.stringify({ posts: postsToAnalyze }),
       });
       const data = (await res.json()) as SocialAnalyzeResponse & { error?: string };
       if (!res.ok) throw new Error(data.error || 'Échec de l’analyse');
       setAnalysis(data);
+      void loadPickStatuses(data.picks.map((p) => p.postId));
     } catch (e) {
       setAnalysis(null);
       setAnalyzeError(e instanceof Error ? e.message : 'Erreur analyse');
@@ -636,6 +787,9 @@ export default function SocialWatchPage() {
                   key={pick.postId}
                   pick={pick}
                   post={analysis.postsById[pick.postId]}
+                  status={pickStatus[pick.postId] ?? null}
+                  saveError={pickSaveError[pick.postId] || undefined}
+                  onStatus={(next) => void savePickStatus(pick, next)}
                 />
               ))}
             </div>

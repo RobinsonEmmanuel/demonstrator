@@ -29,6 +29,8 @@ export type SocialPostReaction = 'like' | 'comment';
 
 export type SocialPostPick = {
   postId: string;
+  /** Résumé du post en 1-2 phrases (texte + image). */
+  summary?: string;
   reaction: SocialPostReaction;
   justification: string;
   suggestedComment?: string;
@@ -71,3 +73,6 @@ export type SocialAnalyzeResponse = {
   dbUpdates: SitDbUpdateSuggestion[];
   postsById: Record<string, SocialPost>;
 };
+
+/** Suite donnée par l'office à une recommandation (base des statistiques d'engagement). */
+export type SocialPickActionStatus = 'followed' | 'ignored';
