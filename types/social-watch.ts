@@ -9,6 +9,7 @@ export type SocialAccount = {
 
 export type SocialPost = {
   id: string;
+  platform?: 'facebook' | 'instagram';
   postUrl: string;
   pageUrl: string;
   poiId?: string;
@@ -44,6 +45,7 @@ export type SocialScrapeResponse = {
   posts: SocialPost[];
   scrapedAt: string;
   facebookPagesScraped: number;
+  instagramProfilesScraped?: number;
 };
 
 export type SitDbUpdateSuggestion = {

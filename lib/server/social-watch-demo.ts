@@ -26,6 +26,18 @@ const DEMO_POIS = [
     facebook: 'https://www.facebook.com/casinobarrieredeauville',
     instagram: 'https://www.instagram.com/casinodeauville.barriere',
   },
+  {
+    poiId: 'hotel_3a232dc6-3c5d-4edc-a1bc-5bf60ca70cd4',
+    poiName: 'Hôtel Barrière Le Royal',
+    facebook: 'https://www.facebook.com/hotelbarriereleroyaldeauville',
+    instagram: 'https://www.instagram.com/leroyaldeauville.barriere',
+  },
+  {
+    poiId: 'restaurant_bar_cafe_98b62c06-e512-41eb-862d-268bbc0a207c',
+    poiName: "Restaurant L'Essentiel",
+    facebook: 'https://www.facebook.com/lessentieldeauville',
+    instagram: 'https://www.instagram.com/essentieldeauville',
+  },
 ] as const;
 
 export const SOCIAL_WATCH_DEMO_CLUSTER_ID = 'deauville-demo';
