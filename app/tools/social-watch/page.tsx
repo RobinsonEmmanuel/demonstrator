@@ -442,15 +442,15 @@ export default function SocialWatchPage() {
         </div>
         <h1 className="text-2xl font-bold text-gray-900">Veille réseaux sociaux</h1>
         <p className="mt-2 text-gray-600 max-w-2xl">
-          En tant qu&apos;office de tourisme, identifiez les publications Facebook de vos
+          En tant qu&apos;office de tourisme, identifiez les publications Facebook et Instagram de vos
           membres (7 derniers jours), puis laissez l&apos;IA sélectionner les posts les plus
           pertinents à valoriser avec un like ou un commentaire prêt à publier.
         </p>
 
-        {filterMode !== 'all' && poiFilter && poiFilter.length > 0 && (
+        {filterMode === 'custom' && poiFilter && poiFilter.length > 0 && (
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             <p className="font-medium">
-              {filterMode === 'demo' ? 'Mode démo' : 'Filtre actif'} —{' '}
+              Filtre actif —{' '}
               {poiFilter.length} établissement{poiFilter.length > 1 ? 's' : ''}
             </p>
             <ul className="mt-1 space-y-0.5 font-mono text-xs text-amber-900/90">
@@ -469,15 +469,17 @@ export default function SocialWatchPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-8 border-b border-gray-200 pb-6">
-          <StepBadge n={1} label="Comptes SIT" done={step1Done} active={!step1Done} />
+          <StepBadge n={1} label={filterMode === 'demo' ? 'Comptes' : 'Comptes SIT'} done={step1Done} active={!step1Done} />
           <StepBadge n={2} label="Collecte posts" done={step2Done} active={step1Done && !step2Done} />
           <StepBadge n={3} label="Engagement IA" done={step3Done} active={step2Done && !step3Done} />
-          <StepBadge
-            n={4}
-            label="Mises à jour BDD"
-            done={step4Done}
-            active={step3Done && !step4Done}
-          />
+          {filterMode !== 'demo' && (
+            <StepBadge
+              n={4}
+              label="Mises à jour BDD"
+              done={step4Done}
+              active={step3Done && !step4Done}
+            />
+          )}
         </div>
 
         {accountsError && (
@@ -510,10 +512,10 @@ export default function SocialWatchPage() {
           ) : (
             <>
               <p className="mt-3 text-sm text-gray-700">
-                <strong>{accounts.length}</strong> lien{accounts.length > 1 ? 's' : ''}{' '}
+                <strong>{accounts.length}</strong> compte{accounts.length > 1 ? 's' : ''}{' '}
                 trouvé{accounts.length > 1 ? 's' : ''},{' '}
-                <strong>{facebookAccounts.length}</strong> page
-                {facebookAccounts.length > 1 ? 's' : ''} Facebook pour la collecte.
+                <strong>{accountsByPoi.length}</strong> lieu
+                {accountsByPoi.length > 1 ? 'x' : ''} suivi{accountsByPoi.length > 1 ? 's' : ''}.
               </p>
               <div className="mt-4 max-h-56 overflow-y-auto rounded-lg border border-gray-100">
                 <table className="w-full text-left text-sm">
@@ -606,8 +608,9 @@ export default function SocialWatchPage() {
                 3. Posts à engager (IA)
               </h2>
               <p className="mt-1 text-sm text-gray-600">
-                Les 5 publications les plus pertinentes — like ou commentaire, et détection
-                des mises à jour du référentiel SIT.
+                {filterMode === 'demo'
+                  ? 'Les 5 publications les plus pertinentes à valoriser — like ou commentaire.'
+                  : 'Les 5 publications les plus pertinentes — like ou commentaire, et détection des mises à jour du référentiel SIT.'}
               </p>
             </div>
             <button
@@ -646,7 +649,7 @@ export default function SocialWatchPage() {
         </section>
 
         {/* Étape 4 */}
-        {analysisRan && (
+        {analysisRan && filterMode !== 'demo' && (
           <section className="mt-6 rounded-xl border border-violet-200 bg-white p-5 mb-8">
             <h2 className="text-lg font-semibold text-gray-900">
               4. Informations à mettre à jour dans la base de données
