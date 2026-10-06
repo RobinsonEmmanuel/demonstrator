@@ -33,6 +33,8 @@ type LlmDbUpdatesOutput = {
   dbUpdates?: LlmDbUpdateItem[];
 };
 
+const MAX_PICKS = 5;
+
 export type SocialPostsAnalysisResult = {
   picks: SocialPostPick[];
   dbUpdates: SitDbUpdateSuggestion[];
@@ -277,7 +279,7 @@ function normalizeDbUpdates(
     );
   }
 
-  return normalized;
+  return normalized.slice(0, MAX_PICKS);
 }
 
 export async function analyzeSocialPosts(
@@ -292,6 +294,7 @@ export async function analyzeSocialPosts(
     id: p.id,
     poiId: p.poiId ?? null,
     poiName: p.poiName ?? '—',
+    platform: p.platform ?? 'facebook',
     publishedAt: p.publishedAt,
     text: p.text.slice(0, 800),
     likes: p.likes ?? 0,
@@ -299,8 +302,9 @@ export async function analyzeSocialPosts(
     postUrl: p.postUrl,
   }));
 
-  const engagementPrompt = `Tu es le community manager d'un office de tourisme (Le Havre et territoire).
-Sélectionne AU MAXIMUM 10 posts pertinents pour réagir (like ou commentaire).
+  const engagementPrompt = `Tu es le community manager d'un office de tourisme (Deauville et territoire).
+Les posts viennent de Facebook et d'Instagram (champ "platform").
+Sélectionne EXACTEMENT les 5 posts les plus pertinents avec lesquels interagir (like ou commentaire), classés du plus au moins pertinent ; moins de 5 seulement s'il n'y en a pas assez de valables. Privilégie la diversité des lieux (pas deux posts du même établissement sauf nécessité).
 
 JSON attendu : { "picks": [ { "postId", "reaction": "like"|"comment", "justification", "suggestedComment"? } ] }
 
@@ -328,7 +332,7 @@ ${JSON.stringify(compactPosts)}`;
   const fieldCatalog = buildFieldCatalog(referential);
 
   const dbPrompt = `Tu es responsable qualité des données touristiques (référentiel SIT Region Lovers).
-Compare les publications Facebook avec le référentiel JSON ci-dessous (parcours blocks → sections → fields).
+Compare les publications Facebook et Instagram avec le référentiel JSON ci-dessous (parcours blocks → sections → fields).
 
 Pour chaque fait NOUVEAU dans un post qui contredit ou complète un champ existant, propose une entrée dbUpdates.
 Utilise UNIQUEMENT des chemins blockId / sectionId / fieldId listés dans le catalogue (ou présents dans le JSON référentiel).
@@ -345,7 +349,7 @@ Plusieurs champs possibles. Maximum 15. Sinon { "dbUpdates": [] }
 === Catalogue des champs (block / section / field) ===
 ${fieldCatalog}
 
-=== Posts Facebook ===
+=== Posts ===
 ${JSON.stringify(compactPosts)}
 
 === Référentiel SIT (valeurs actuelles) ===

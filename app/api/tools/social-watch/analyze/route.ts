@@ -9,6 +9,7 @@ import {
 } from '@/lib/server/sit-referential-fetch';
 import { extractSitPoiInstanceId } from '@/lib/sit-poi-label';
 import { filterDraftsByPoiIds } from '@/lib/sit-online-presence';
+import { useDemoSocialAccounts } from '@/lib/server/social-watch-demo';
 import type { SocialAnalyzeResponse, SocialPost } from '@/types/social-watch';
 
 export async function POST(request: NextRequest) {
@@ -23,30 +24,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { ids: poiFilter } = getSocialWatchPoiFilter();
-    const { drafts } = await fetchClusterDraftsRaw();
-    const filteredDrafts = filterDraftsByPoiIds(drafts, poiFilter);
+    // Démo : pas de référentiel SIT → on ne calcule que les 5 posts à engager.
+    let referential: Awaited<ReturnType<typeof fetchSitSnapshotsForPoiIds>> = [];
+    if (!useDemoSocialAccounts()) {
+      const { ids: poiFilter } = getSocialWatchPoiFilter();
+      const { drafts } = await fetchClusterDraftsRaw();
+      const filteredDrafts = filterDraftsByPoiIds(drafts, poiFilter);
 
-    const targetPoiIds = new Set<string>();
+      const targetPoiIds = new Set<string>();
 
-    for (const id of poiFilter ?? []) {
-      targetPoiIds.add(id);
+      for (const id of poiFilter ?? []) {
+        targetPoiIds.add(id);
+      }
+
+      for (const draft of filteredDrafts) {
+        const id = extractSitPoiInstanceId(draft);
+        if (id) targetPoiIds.add(id);
+      }
+
+      for (const id of resolvePoiIdsForPosts(body.posts, drafts)) {
+        targetPoiIds.add(id);
+      }
+
+      for (const post of body.posts) {
+        if (post.poiId) targetPoiIds.add(post.poiId);
+      }
+
+      referential = await fetchSitSnapshotsForPoiIds(targetPoiIds);
+
     }
-
-    for (const draft of filteredDrafts) {
-      const id = extractSitPoiInstanceId(draft);
-      if (id) targetPoiIds.add(id);
-    }
-
-    for (const id of resolvePoiIdsForPosts(body.posts, drafts)) {
-      targetPoiIds.add(id);
-    }
-
-    for (const post of body.posts) {
-      if (post.poiId) targetPoiIds.add(post.poiId);
-    }
-
-    const referential = await fetchSitSnapshotsForPoiIds(targetPoiIds);
 
     const { picks, dbUpdates } = await analyzeSocialPosts(body.posts, referential);
     const postsById = Object.fromEntries(body.posts.map((p) => [p.id, p]));

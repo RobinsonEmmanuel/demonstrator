@@ -203,6 +203,11 @@ function PostCard({ post }: { post: SocialPost }) {
         <div>
           <p className="text-sm font-semibold text-gray-900">
             {post.poiName ?? 'Page Facebook'}
+            {post.platform === 'instagram' && (
+              <span className="ml-2 rounded bg-pink-100 px-1.5 py-0.5 text-xs font-medium text-pink-700">
+                Instagram
+              </span>
+            )}
           </p>
           <p className="text-xs text-gray-500">{formatDate(post.publishedAt)}</p>
         </div>
@@ -545,7 +550,7 @@ export default function SocialWatchPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                2. Posts Facebook (7 derniers jours)
+                2. Posts Facebook et Instagram (7 derniers jours)
               </h2>
               <p className="mt-1 text-sm text-gray-600">
                 Collecte via Apify — max. 5 posts par page, tri chronologique.
@@ -554,7 +559,7 @@ export default function SocialWatchPage() {
             <button
               type="button"
               onClick={() => void handleScrape()}
-              disabled={scrapeLoading || facebookAccounts.length === 0}
+              disabled={scrapeLoading || accounts.length === 0}
               className="shrink-0 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
             >
               {scrapeLoading ? 'Collecte en cours…' : 'Lancer la collecte'}
@@ -592,7 +597,7 @@ export default function SocialWatchPage() {
                 3. Posts à engager (IA)
               </h2>
               <p className="mt-1 text-sm text-gray-600">
-                Jusqu&apos;à 10 publications recommandées — like ou commentaire, et détection
+                Les 5 publications les plus pertinentes — like ou commentaire, et détection
                 des mises à jour du référentiel SIT.
               </p>
             </div>

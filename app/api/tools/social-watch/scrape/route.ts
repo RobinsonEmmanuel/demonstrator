@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/server/request-auth';
 import { scrapeFacebookPosts } from '@/lib/server/apify-facebook';
+import { scrapeInstagramPosts } from '@/lib/server/apify-instagram';
 import { fetchClusterDraftsRaw } from '@/lib/server/sit-cluster-fetch';
 import {
   extractClusterSocialAccounts,
@@ -22,11 +23,17 @@ export async function POST(request: NextRequest) {
     }
 
     let facebookPages = body.facebookUrls;
+    let instagramProfiles: { url: string; poiId: string; poiName: string }[] = [];
 
     if (!facebookPages?.length && useDemoSocialAccounts()) {
-      facebookPages = getDemoSocialAccounts()
-        .filter((a) => a.platform === 'facebook')
-        .map((a) => ({ url: a.url, poiId: a.poiId, poiName: a.poiName }));
+      const demo = getDemoSocialAccounts();
+      const toPage = (a: (typeof demo)[number]) => ({
+        url: a.url,
+        poiId: a.poiId,
+        poiName: a.poiName,
+      });
+      facebookPages = demo.filter((a) => a.platform === 'facebook').map(toPage);
+      instagramProfiles = demo.filter((a) => a.platform === 'instagram').map(toPage);
     }
 
     if (!facebookPages?.length) {
@@ -34,24 +41,36 @@ export async function POST(request: NextRequest) {
       const { drafts } = await fetchClusterDraftsRaw();
       const filteredDrafts = filterDraftsByPoiIds(drafts, poiFilter);
       const accounts = extractClusterSocialAccounts(filteredDrafts);
-      facebookPages = accounts
-        .filter((a) => a.platform === 'facebook')
-        .map((a) => ({ url: a.url, poiId: a.poiId, poiName: a.poiName }));
+      const toPage = (a: (typeof accounts)[number]) => ({
+        url: a.url,
+        poiId: a.poiId,
+        poiName: a.poiName,
+      });
+      facebookPages = accounts.filter((a) => a.platform === 'facebook').map(toPage);
+      instagramProfiles = accounts.filter((a) => a.platform === 'instagram').map(toPage);
     }
 
-    if (facebookPages.length === 0) {
+    if (facebookPages.length === 0 && instagramProfiles.length === 0) {
       return NextResponse.json(
-        { error: 'Aucune page Facebook trouvée dans le référentiel SIT.' },
+        { error: 'Aucun compte Facebook ou Instagram trouvé.' },
         { status: 400 }
       );
     }
 
-    const posts = await scrapeFacebookPosts(facebookPages);
+    const [fbPosts, igPosts] = await Promise.all([
+      facebookPages.length ? scrapeFacebookPosts(facebookPages) : Promise.resolve([]),
+      instagramProfiles.length ? scrapeInstagramPosts(instagramProfiles) : Promise.resolve([]),
+    ]);
+    const posts = [...fbPosts, ...igPosts].sort(
+      (a, b) =>
+        new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
+    );
 
     const payload: SocialScrapeResponse = {
       posts,
       scrapedAt: new Date().toISOString(),
       facebookPagesScraped: facebookPages.length,
+      instagramProfilesScraped: instagramProfiles.length,
     };
 
     return NextResponse.json(payload);

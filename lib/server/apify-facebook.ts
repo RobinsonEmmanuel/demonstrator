@@ -71,6 +71,7 @@ function normalizePost(
 
   return {
     id,
+    platform: 'facebook',
     postUrl: postUrl ?? '',
     pageUrl,
     poiId: linked?.poiId,
