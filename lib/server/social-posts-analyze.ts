@@ -297,13 +297,14 @@ export async function analyzeSocialPosts(
     platform: p.platform ?? 'facebook',
     publishedAt: p.publishedAt,
     text: p.text.slice(0, 800),
+    imageText: p.imageText?.slice(0, 600) ?? null,
     likes: p.likes ?? 0,
     comments: p.comments ?? 0,
     postUrl: p.postUrl,
   }));
 
   const engagementPrompt = `Tu es le community manager d'un office de tourisme (Deauville et territoire).
-Les posts viennent de Facebook et d'Instagram (champ "platform").
+Les posts viennent de Facebook et d'Instagram (champ "platform"). Le champ "imageText" est le texte et la description lus sur les images du post : tiens-en compte (une affiche d'événement, un menu ou un prix peut être uniquement dans l'image).
 Sélectionne EXACTEMENT les 5 posts les plus pertinents avec lesquels interagir (like ou commentaire), classés du plus au moins pertinent ; moins de 5 seulement s'il n'y en a pas assez de valables. Privilégie la diversité des lieux (pas deux posts du même établissement sauf nécessité).
 
 JSON attendu : { "picks": [ { "postId", "reaction": "like"|"comment", "justification", "suggestedComment"? } ] }

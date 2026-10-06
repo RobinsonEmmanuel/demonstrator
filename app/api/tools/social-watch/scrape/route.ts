@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/server/request-auth';
 import { scrapeFacebookPosts } from '@/lib/server/apify-facebook';
 import { scrapeInstagramPosts } from '@/lib/server/apify-instagram';
+import { readPostImages } from '@/lib/server/social-image-reader';
 import { fetchClusterDraftsRaw } from '@/lib/server/sit-cluster-fetch';
 import {
   extractClusterSocialAccounts,
@@ -66,11 +67,19 @@ export async function POST(request: NextRequest) {
         new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
     );
 
+    // Lecture des images (affiches, menus, photos) — non bloquante : sans clé OpenAI ou en cas
+    // d'échec, les posts restent exploitables avec leur seul texte.
+    const imageReport = process.env.OPENAI_API_KEY?.trim()
+      ? await readPostImages(posts).catch(() => null)
+      : null;
+
     const payload: SocialScrapeResponse = {
       posts,
       scrapedAt: new Date().toISOString(),
       facebookPagesScraped: facebookPages.length,
       instagramProfilesScraped: instagramProfiles.length,
+      imagesRead: imageReport?.read,
+      imagesFailed: imageReport?.failed,
     };
 
     return NextResponse.json(payload);

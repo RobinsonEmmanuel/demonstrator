@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { extractImageUrls } from '@/lib/server/social-image-urls';
 import type { SocialPost } from '@/types/social-watch';
 
 const ACTOR_ID = 'apify~facebook-posts-scraper';
@@ -77,6 +78,7 @@ function normalizePost(
     poiId: linked?.poiId,
     poiName: linked?.poiName ?? pickString(item, ['pageName', 'title']),
     text,
+    imageUrls: extractImageUrls(item),
     publishedAt,
     likes: pickNumber(item, ['likes', 'likesCount', 'reactions']),
     comments: pickNumber(item, ['comments', 'commentsCount']),
