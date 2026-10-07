@@ -8,6 +8,8 @@ import { authFetch } from '@/lib/api-client';
 import { ImageCard } from '@/components/image-classify/ImageCard';
 import { DuplicateGroupsSection } from '@/components/image-classify/DuplicateGroupsSection';
 import { ImageDetailPanel } from '@/components/image-classify/ImageDetailPanel';
+import { WorkflowSteps } from '@/components/image-classify/WorkflowSteps';
+import { ResultSummary } from '@/components/image-classify/ResultSummary';
 import type { AnalyzedImageResult, ImageClassifyResponse } from '@/types/image-classify';
 
 const MAX_FILES = 20;
@@ -39,7 +41,7 @@ export default function ImageClassificationPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'raw' | 'all' | 'duplicates' | 'ranking'>('raw');
+  const [activeSection, setActiveSection] = useState<'raw' | 'all' | 'duplicates'>('raw');
 
   const previewById = useMemo(
     () => new Map(localImages.map((i) => [i.id, i.dataUrl])),
@@ -120,13 +122,6 @@ export default function ImageClassificationPage() {
     setActiveSection('raw');
   };
 
-  const rankedImages = useMemo(() => {
-    if (!result) return [];
-    return result.rankedImageIds
-      .map((id) => imagesById.get(id))
-      .filter(Boolean) as NonNullable<ReturnType<typeof imagesById.get>>[];
-  }, [result, imagesById]);
-
   const selectedImage = selectedId ? imagesById.get(selectedId) : undefined;
 
   if (!ready) {
@@ -147,13 +142,15 @@ export default function ImageClassificationPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Classification d&apos;images</h1>
             <p className="text-gray-600 mt-1">
-              Chargement → embedding SigLIP (Mongo) → doublons visuels → analyse vision → scoring
-              esthétique → conformité → comparaison détaillée au clic.
+              De la photo brute à la fiche prête à publier : l’IA repère les doublons, contrôle la
+              conformité, note chaque image et rédige les textes.
             </p>
           </div>
         </div>
 
         <div className="space-y-6">
+          <WorkflowSteps phase={analyzing ? 'running' : result ? 'done' : 'idle'} />
+
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -244,7 +241,8 @@ export default function ImageClassificationPage() {
 
           {analyzing && (
             <p className="text-sm text-gray-600 animate-pulse">
-              Analyse vision, détection des doublons et scoring en cours (peut prendre 1–2 min)…
+              Analyse en cours : empreinte visuelle, lecture, conformité et notation de chaque photo
+              (peut prendre 1–2 min)…
             </p>
           )}
 
@@ -256,6 +254,8 @@ export default function ImageClassificationPage() {
             </div>
           )}
 
+          {result && !analyzing && <ResultSummary result={result} />}
+
           {localImages.length > 0 && (
             <>
               <div className="flex gap-2 border-b border-gray-200">
@@ -264,7 +264,6 @@ export default function ImageClassificationPage() {
                     ['raw', `Photos brutes (${localImages.length})`, true],
                     ['all', 'Photos analysées', !!result],
                     ['duplicates', `Doublons${result ? ` (${result.duplicateGroups.length})` : ''}`, !!result],
-                    ['ranking', 'Classement', !!result],
                   ] as const
                 ).map(([key, label, enabled]) => (
                   <button
@@ -327,38 +326,6 @@ export default function ImageClassificationPage() {
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                 />
-              )}
-
-              {result && activeSection === 'ranking' && (
-                <ol className="space-y-2">
-                  {rankedImages.map((img, idx) => {
-                    const url = previewById.get(img.id);
-                    if (!url) return null;
-                    return (
-                      <li
-                        key={img.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-                      >
-                        <span className="text-lg font-bold text-gray-400 w-8">{idx + 1}</span>
-                        <img
-                          src={url}
-                          alt=""
-                          className="w-16 h-12 object-cover rounded"
-                        />
-                        <button
-                          type="button"
-                          className="flex-1 text-left text-sm"
-                          onClick={() => setSelectedId(img.id)}
-                        >
-                          <span className="font-medium">{img.name}</span>
-                          <span className="text-gray-500 ml-2">
-                            {img.analysis.aesthetic.overall}/10
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
               )}
             </>
           )}

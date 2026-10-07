@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { AnalyzedImageResult } from '@/types/image-classify';
 import { CompliancePanel } from '@/components/image-classify/CompliancePanel';
 import { ComplianceBadge } from '@/components/image-classify/CompliancePanel';
@@ -70,6 +70,75 @@ function SectionCard({
       <p className={`mb-2 shrink-0 ${sectionTitle}`}>{title}</p>
       <div className={fill ? 'min-h-0 flex-1 overflow-y-auto' : ''}>{children}</div>
     </section>
+  );
+}
+
+type TextKey = 'alt' | 'caption' | 'description';
+
+const TEXT_TABS: Array<{ key: TextKey; label: string; usage: string }> = [
+  {
+    key: 'description',
+    label: 'Description',
+    usage: 'Ce que l\'IA voit, en détail — pour classer et retrouver la photo.',
+  },
+  {
+    key: 'alt',
+    label: 'Texte alternatif',
+    usage: 'Lu à voix haute aux personnes malvoyantes, utile aussi pour le référencement.',
+  },
+  { key: 'caption', label: 'Légende', usage: 'Affichée sous la photo, pour le lecteur.' },
+];
+
+function GeneratedTexts({
+  alt,
+  caption,
+  description,
+  issues,
+}: {
+  alt: string;
+  caption?: string;
+  description: string;
+  issues: string[];
+}) {
+  const [tab, setTab] = useState<TextKey>('description');
+
+  const tabs = TEXT_TABS.filter((t) => t.key !== 'caption' || caption);
+  const current = tabs.find((t) => t.key === tab) ?? tabs[0];
+  const text =
+    current.key === 'alt' ? alt : current.key === 'caption' ? (caption ?? '') : description;
+
+  return (
+    <div className="shrink-0 rounded-lg border border-orange-200/70 bg-orange-50/90 p-2.5">
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-orange-800">
+        Textes rédigés par l&apos;IA
+      </p>
+      <div className="mb-2 flex gap-1 rounded-lg bg-orange-100/70 p-0.5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${
+              current.key === t.key
+                ? 'bg-white text-orange-700 shadow-sm'
+                : 'text-orange-900/70 hover:text-orange-900'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] leading-snug text-slate-500">{current.usage}</p>
+      <p className="mt-1.5 max-h-24 overflow-y-auto text-sm leading-snug text-slate-800">{text}</p>
+      {current.key === 'description' && issues.length > 0 && (
+        <p className="mt-1.5 text-xs leading-snug text-amber-800">
+          Technique : {issues.join(' · ')}
+        </p>
+      )}
+      {current.key === 'alt' && (
+        <p className="mt-2 text-[11px] text-orange-800/80">{text.length}/125 caractères</p>
+      )}
+    </div>
   );
 }
 
@@ -162,26 +231,15 @@ export function ImageDetailPanel({
               </div>
             </div>
 
-            <div className="shrink-0 rounded-lg border border-orange-200/70 bg-orange-50/90 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-800">
-                Texte alternatif (alt)
-                <span className="ml-2 font-normal normal-case tracking-normal text-orange-700/70">
-                  {altText.length}/125
-                </span>
-              </p>
-              <p className="mt-1 text-sm leading-snug text-slate-800">{altText}</p>
-              {a.suggestedCaption && (
-                <>
-                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-orange-800">
-                    Légende
-                  </p>
-                  <p className="mt-1 text-sm leading-snug text-slate-800">{a.suggestedCaption}</p>
-                </>
-              )}
-            </div>
+            <GeneratedTexts
+              alt={altText}
+              caption={a.suggestedCaption}
+              description={a.fullDescription}
+              issues={a.technical.issues}
+            />
           </div>
 
-          <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-2.5 bg-slate-50/50 p-3">
+          <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-2.5 bg-slate-50/50 p-3">
             {/* Score */}
             <div className="flex shrink-0 items-center gap-4 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
               <div className="shrink-0 text-center">
@@ -260,17 +318,6 @@ export function ImageDetailPanel({
                 </div>
               </SectionCard>
             </div>
-
-            <SectionCard title="Description">
-              <p className="line-clamp-2 text-sm leading-relaxed text-slate-800 sm:line-clamp-3">
-                {a.fullDescription}
-              </p>
-              {a.technical.issues.length > 0 && (
-                <p className="mt-2 text-xs leading-snug text-amber-800">
-                  Technique : {a.technical.issues.join(' · ')}
-                </p>
-              )}
-            </SectionCard>
           </div>
         </div>
       </div>
