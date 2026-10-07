@@ -72,7 +72,13 @@ Analyse cette image et réponds UNIQUEMENT en JSON valide (sans markdown).
   - people_focus : personnes clairement au centre de la composition
   - other : si aucune catégorie ne convient
 - tags : 5–12 tags courts (français), type fiche POI (façade, salle, vue, accès PMR…)
-- suggestedCaption : légende éditoriale courte (peut être engageante)
+- suggestedCaption : légende destinée au lecteur, affichée sous la photo. Règles strictes :
+  - une phrase de 8 à 18 mots, sobre et factuelle : nomme précisément le lieu ou l'élément visible (nom propre, matière, époque ou style seulement s'ils sont identifiables dans l'image ou donnés dans le contexte) ;
+  - AUCUN adjectif subjectif ou promotionnel (« magnifique », « intrigant », « fascinant », « superbe », « charmant »…) ;
+  - n'invente rien : pas de nom, de date ou d'histoire qui ne soit pas visible ou fourni dans le contexte ;
+  - ne répète pas l'altText : la légende apporte une information en plus (où, quoi de remarquable) ;
+  - pas de formule vague du type « détails artistiques », « ambiance unique », « vue sur… ».
+  Exemple : « Le cloître des Franciscaines, ouvert au public, avec ses coursives en briques et son espace de lecture ».
 - altText : texte alternatif pour l'attribut HTML alt, conforme aux recommandations W3C/WAI :
   - 125 caractères maximum, une seule phrase courte ;
   - décrit ce qui est visible et utile pour comprendre l'image, de façon factuelle (qui/quoi/où), sans interprétation ni langage promotionnel ;

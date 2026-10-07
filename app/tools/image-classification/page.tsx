@@ -8,6 +8,8 @@ import { authFetch } from '@/lib/api-client';
 import { ImageCard } from '@/components/image-classify/ImageCard';
 import { DuplicateGroupsSection } from '@/components/image-classify/DuplicateGroupsSection';
 import { ImageDetailPanel } from '@/components/image-classify/ImageDetailPanel';
+import { WorkflowSteps } from '@/components/image-classify/WorkflowSteps';
+import { ResultSummary } from '@/components/image-classify/ResultSummary';
 import type { AnalyzedImageResult, ImageClassifyResponse } from '@/types/image-classify';
 
 const MAX_FILES = 20;
@@ -39,7 +41,7 @@ export default function ImageClassificationPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'raw' | 'all' | 'duplicates' | 'ranking'>('raw');
+  const [activeSection, setActiveSection] = useState<'raw' | 'all' | 'duplicates'>('raw');
 
   const previewById = useMemo(
     () => new Map(localImages.map((i) => [i.id, i.dataUrl])),
@@ -120,13 +122,6 @@ export default function ImageClassificationPage() {
     setActiveSection('raw');
   };
 
-  const rankedImages = useMemo(() => {
-    if (!result) return [];
-    return result.rankedImageIds
-      .map((id) => imagesById.get(id))
-      .filter(Boolean) as NonNullable<ReturnType<typeof imagesById.get>>[];
-  }, [result, imagesById]);
-
   const selectedImage = selectedId ? imagesById.get(selectedId) : undefined;
 
   if (!ready) {
@@ -147,94 +142,101 @@ export default function ImageClassificationPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Classification d&apos;images</h1>
             <p className="text-gray-600 mt-1">
-              Chargement → embedding SigLIP (Mongo) → doublons visuels → analyse vision → scoring
-              esthétique → conformité → comparaison détaillée au clic.
+              De la photo brute à la fiche prête à publier : l’IA repère les doublons, contrôle la
+              conformité, note chaque image et rédige les textes.
             </p>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lieu (optionnel)
-              </label>
-              <input
-                type="text"
-                value={poiName}
-                onChange={(e) => setPoiName(e.target.value)}
-                placeholder="Ex. MuMa Le Havre"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Destination (optionnel)
-              </label>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Ex. Le Havre"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-            </div>
-          </div>
+          <WorkflowSteps phase={analyzing ? 'running' : result ? 'done' : 'idle'} />
 
-          <div
-            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-400 transition-colors bg-gray-50/50"
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              void addFiles(e.dataTransfer.files);
-            }}
-          >
-            <ArrowUpTrayIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 mb-3">
-              Glissez vos images ici ou parcourez (max {MAX_FILES}, {MAX_MB} Mo / fichier)
-            </p>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => void addFiles(e.target.files)}
-            />
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Choisir des fichiers
-            </button>
-            {localImages.length > 0 && (
-              <p className="mt-3 text-xs text-gray-500">{localImages.length} image(s) chargée(s)</p>
-            )}
-          </div>
+          {/* Formulaire de dépôt : visible uniquement sur l'onglet « Photos brutes » */}
+          {activeSection === 'raw' && (
+            <>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lieu (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={poiName}
+                  onChange={(e) => setPoiName(e.target.value)}
+                  placeholder="Ex. MuMa Le Havre"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Destination (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="Ex. Le Havre"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={analyzing || localImages.length === 0}
-              className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-400 transition-colors bg-gray-50/50"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                void addFiles(e.dataTransfer.files);
+              }}
             >
-              {analyzing ? 'Analyse en cours…' : 'Analyser les images'}
-            </button>
-            {localImages.length > 0 && (
+              <ArrowUpTrayIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-3">
+                Glissez vos images ici ou parcourez (max {MAX_FILES}, {MAX_MB} Mo / fichier)
+              </p>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => void addFiles(e.target.files)}
+              />
               <button
                 type="button"
-                onClick={clearAll}
-                className="px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                onClick={() => inputRef.current?.click()}
+                className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Tout effacer
+                Choisir des fichiers
               </button>
-            )}
-          </div>
+              {localImages.length > 0 && (
+                <p className="mt-3 text-xs text-gray-500">{localImages.length} image(s) chargée(s)</p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={analyzing || localImages.length === 0}
+                className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+              >
+                {analyzing ? 'Analyse en cours…' : 'Analyser les images'}
+              </button>
+              {localImages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Tout effacer
+                </button>
+              )}
+            </div>
+            </>
+          )}
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -244,7 +246,8 @@ export default function ImageClassificationPage() {
 
           {analyzing && (
             <p className="text-sm text-gray-600 animate-pulse">
-              Analyse vision, détection des doublons et scoring en cours (peut prendre 1–2 min)…
+              Analyse en cours : empreinte visuelle, lecture, conformité et notation de chaque photo
+              (peut prendre 1–2 min)…
             </p>
           )}
 
@@ -256,6 +259,8 @@ export default function ImageClassificationPage() {
             </div>
           )}
 
+          {result && !analyzing && <ResultSummary result={result} />}
+
           {localImages.length > 0 && (
             <>
               <div className="flex gap-2 border-b border-gray-200">
@@ -264,7 +269,6 @@ export default function ImageClassificationPage() {
                     ['raw', `Photos brutes (${localImages.length})`, true],
                     ['all', 'Photos analysées', !!result],
                     ['duplicates', `Doublons${result ? ` (${result.duplicateGroups.length})` : ''}`, !!result],
-                    ['ranking', 'Classement', !!result],
                   ] as const
                 ).map(([key, label, enabled]) => (
                   <button
@@ -327,38 +331,6 @@ export default function ImageClassificationPage() {
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                 />
-              )}
-
-              {result && activeSection === 'ranking' && (
-                <ol className="space-y-2">
-                  {rankedImages.map((img, idx) => {
-                    const url = previewById.get(img.id);
-                    if (!url) return null;
-                    return (
-                      <li
-                        key={img.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-                      >
-                        <span className="text-lg font-bold text-gray-400 w-8">{idx + 1}</span>
-                        <img
-                          src={url}
-                          alt=""
-                          className="w-16 h-12 object-cover rounded"
-                        />
-                        <button
-                          type="button"
-                          className="flex-1 text-left text-sm"
-                          onClick={() => setSelectedId(img.id)}
-                        >
-                          <span className="font-medium">{img.name}</span>
-                          <span className="text-gray-500 ml-2">
-                            {img.analysis.aesthetic.overall}/10
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
               )}
             </>
           )}

@@ -21,7 +21,7 @@ const STATUS_ICON: Record<ComplianceStatus, string> = {
 };
 
 export function ComplianceBadge({ status }: { status: ComplianceStatus }) {
-  const labels = { pass: 'Conforme', warning: 'Attention', fail: 'Non conforme' };
+  const labels = { pass: 'Prête à publier', warning: 'À vérifier', fail: 'À écarter' };
   const colors = {
     pass: 'bg-emerald-100 text-emerald-800',
     warning: 'bg-amber-100 text-amber-800',
