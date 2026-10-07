@@ -83,7 +83,7 @@ export function ImageDetailPanel({
   onClose: () => void;
 }) {
   const a = image.analysis;
-  const altText = a.suggestedCaption || a.shortDescription || image.name;
+  const altText = a.altText || a.shortDescription || image.name;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -164,9 +164,20 @@ export function ImageDetailPanel({
 
             <div className="shrink-0 rounded-lg border border-orange-200/70 bg-orange-50/90 px-3 py-2.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-800">
-                Légende (alt)
+                Texte alternatif (alt)
+                <span className="ml-2 font-normal normal-case tracking-normal text-orange-700/70">
+                  {altText.length}/125
+                </span>
               </p>
               <p className="mt-1 text-sm leading-snug text-slate-800">{altText}</p>
+              {a.suggestedCaption && (
+                <>
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-orange-800">
+                    Légende
+                  </p>
+                  <p className="mt-1 text-sm leading-snug text-slate-800">{a.suggestedCaption}</p>
+                </>
+              )}
             </div>
           </div>
 

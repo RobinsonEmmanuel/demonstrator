@@ -60,7 +60,10 @@ export interface ImageAnalysis {
   sceneType: SceneType;
   compositionType: CompositionType;
   tags: string[];
+  /** Légende éditoriale (affichée à côté de la photo, distincte de l'alt). */
   suggestedCaption?: string;
+  /** Texte alternatif W3C (attribut alt) : concis, factuel, sans « image de ». */
+  altText?: string;
   notablePoints: NotablePoint[];
   technical: TechnicalQuality;
   aesthetic: AestheticScores;

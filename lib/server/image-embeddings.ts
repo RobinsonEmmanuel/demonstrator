@@ -35,6 +35,14 @@ function countSharedTags(a: string[], b: string[]): number {
   return n;
 }
 
+/** Seuil de doublon photo — aligné sur visior (bench/dedup.py, DEFAULT_THRESHOLD = 0.97). */
+export const DEFAULT_DUPLICATE_THRESHOLD = 0.97;
+
+export function duplicateSimilarityThreshold(): number {
+  const v = Number(process.env.SIMILARITY_MIN_SCORE);
+  return Number.isFinite(v) && v > 0 && v <= 1 ? v : DEFAULT_DUPLICATE_THRESHOLD;
+}
+
 export interface ClusterBySimilarityOptions {
   /** Seuil principal (similarité cosinus sur les embeddings). */
   threshold?: number;

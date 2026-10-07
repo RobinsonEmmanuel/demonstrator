@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { analyzeImageWithVision } from '@/lib/server/image-vision';
-import { clusterBySimilarity } from '@/lib/server/image-embeddings';
+import { clusterBySimilarity, duplicateSimilarityThreshold } from '@/lib/server/image-embeddings';
 import { buildGroupRecommendationRationale } from '@/lib/server/image-duplicate-rationale';
 import { buildDuplicateGroupComparison } from '@/lib/image-group-comparison';
 import { indexImageBatch, loadBatchEmbeddings } from '@/lib/server/image-siglip-index';
@@ -14,8 +14,6 @@ import type {
   UploadedImageInput,
 } from '@/types/image-classify';
 
-/** Similarité visuelle SigLIP (cosinus) — seuil de regroupement. */
-const SIGLIP_DUPLICATE_THRESHOLD = Number(process.env.SIMILARITY_MIN_SCORE ?? 0.82);
 const ANALYZE_CONCURRENCY = 3;
 
 async function mapPool<T, R>(
@@ -64,7 +62,7 @@ function buildClustersFromEmbeddings(
   embeddings: number[][]
 ): string[][] {
   return clusterBySimilarity(idOrder, embeddings, {
-    threshold: SIGLIP_DUPLICATE_THRESHOLD,
+    threshold: duplicateSimilarityThreshold(),
   });
 }
 
@@ -104,7 +102,7 @@ export async function runImageClassificationPipeline(
 
   const imageToGroup = new Map<string, string>();
   const duplicateGroups: DuplicateGroup[] = [];
-  const thresholdPct = Math.round(SIGLIP_DUPLICATE_THRESHOLD * 100);
+  const thresholdPct = Math.round(duplicateSimilarityThreshold() * 100);
   const similarityNoteBase = siglipMocked
     ? `${thresholdPct} % (mock SigLIP — configurez SIGLIP_SERVICE_URL pour la similarité visuelle réelle)`
     : `${thresholdPct} % (similarité visuelle SigLIP)`;
