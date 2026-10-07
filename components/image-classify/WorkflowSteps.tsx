@@ -3,26 +3,11 @@
 export type WorkflowPhase = 'idle' | 'running' | 'done';
 
 const STEPS = [
-  {
-    title: 'Empreinte visuelle',
-    text: 'Chaque photo reçoit une signature enregistrée en base : les doublons sont retrouvés même recadrés ou retouchés.',
-  },
-  {
-    title: 'Lecture par l’IA',
-    text: 'Lieu, type de plan, éléments visibles : ce que la photo montre vraiment.',
-  },
-  {
-    title: 'Contrôle de conformité',
-    text: '7 vérifications : visages (RGPD), mineurs, logos, filigranes, texte incrusté, contenu inapproprié, cohérence avec le lieu.',
-  },
-  {
-    title: 'Notation éditoriale',
-    text: 'Composition, lumière, impact, pertinence, et choix argumenté de la meilleure photo parmi les doublons.',
-  },
-  {
-    title: 'Fiche prête à l’emploi',
-    text: 'Description, texte alternatif accessible, légende et mots-clés, enregistrés en base.',
-  },
+  { title: 'Empreinte visuelle', text: 'Retrouve les doublons, même retouchés' },
+  { title: 'Lecture par l’IA', text: 'Comprend ce que montre la photo' },
+  { title: 'Conformité', text: 'RGPD, droits, logos, filigranes' },
+  { title: 'Notation éditoriale', text: 'Choisit la meilleure photo' },
+  { title: 'Fiche prête à l’emploi', text: 'Textes et mots-clés en base' },
 ] as const;
 
 export function WorkflowSteps({ phase }: { phase: WorkflowPhase }) {
