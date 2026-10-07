@@ -40,11 +40,19 @@ async function embedViaRunpod(dataUrl: string): Promise<SiglipEmbedResult> {
   const base = `https://api.runpod.ai/v2/${endpointId}`;
   const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
   const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+  // Clé applicative contrôlée par le handler du worker (SIGLIP_API_KEY dans visior).
+  const siglipApiKey = process.env.SIGLIP_API_KEY?.trim();
 
   const res = await fetch(`${base}/runsync`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ input: { operation: 'embed_image', image_base64: b64 } }),
+    body: JSON.stringify({
+      input: {
+        operation: 'embed_image',
+        image_base64: b64,
+        ...(siglipApiKey ? { api_key: siglipApiKey } : {}),
+      },
+    }),
     signal: AbortSignal.timeout(180_000),
   });
   let data = (await res.json()) as {
