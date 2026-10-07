@@ -23,6 +23,21 @@ function normalizeCompositionType(raw: unknown): CompositionType {
   return VALID_COMPOSITION_TYPES.includes(v) ? v : 'other';
 }
 
+const ALT_MAX_LENGTH = 125;
+
+/** Alt W3C : pas de préfixe « image/photo de », une phrase, 125 caractères max, sans point final. */
+function normalizeAltText(raw: unknown): string | undefined {
+  let t = String(raw ?? '').replace(/\s+/g, ' ').trim();
+  if (!t) return undefined;
+  t = t.replace(/^(?:une?\s+)?(?:image|photo|photographie|illustration|capture(?: d'écran)?|vue)\s+(?:de la|de l'|du|des|de|d')\s*/i, '');
+  t = t.replace(/[.\s]+$/, '');
+  if (t.length > ALT_MAX_LENGTH) {
+    const cut = t.slice(0, ALT_MAX_LENGTH - 1);
+    t = cut.slice(0, cut.lastIndexOf(' ') > 60 ? cut.lastIndexOf(' ') : undefined).replace(/[,;:\s]+$/, '') + '…';
+  }
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : undefined;
+}
+
 function cleanJson(s: string): string {
   let c = s.trim();
   if (c.startsWith('```json')) c = c.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '');
@@ -57,7 +72,15 @@ Analyse cette image et réponds UNIQUEMENT en JSON valide (sans markdown).
   - people_focus : personnes clairement au centre de la composition
   - other : si aucune catégorie ne convient
 - tags : 5–12 tags courts (français), type fiche POI (façade, salle, vue, accès PMR…)
-- suggestedCaption : légende éditoriale courte
+- suggestedCaption : légende éditoriale courte (peut être engageante)
+- altText : texte alternatif pour l'attribut HTML alt, conforme aux recommandations W3C/WAI :
+  - 125 caractères maximum, une seule phrase courte ;
+  - décrit ce qui est visible et utile pour comprendre l'image, de façon factuelle (qui/quoi/où), sans interprétation ni langage promotionnel ;
+  - ne commence jamais par « image de », « photo de », « vue de », « illustration de » ;
+  - ne mentionne pas la météo, l'heure ou la qualité de la photo sauf si c'est le sujet ;
+  - si l'image contient un texte lisible (enseigne, logo, panneau), reprend ce texte ;
+  - ne répète pas la légende ni le nom du fichier.
+  Exemple : « Façade en briques des Franciscaines et panneau portant le nom du musée ».
 - notablePoints : [{ "label": "élément visible", "region": "avant-plan|centre|arrière-plan" }]
 
 **Qualité technique** (technical)
@@ -93,6 +116,7 @@ Format :
   "compositionType": "wide_exterior",
   "tags": ["..."],
   "suggestedCaption": "...",
+  "altText": "...",
   "notablePoints": [],
   "technical": { "resolutionOk": true, "sharpnessOk": true, "horizonLevel": true, "issues": [] },
   "aesthetic": { "composition": 8, "lighting": 7, "editorialImpact": 8, "subjectRelevance": 9, "overall": 8 },
@@ -128,6 +152,7 @@ function normalizeAnalysis(raw: Record<string, unknown>): ImageAnalysis {
     compositionType: normalizeCompositionType(raw.compositionType),
     tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
     suggestedCaption: raw.suggestedCaption ? String(raw.suggestedCaption) : undefined,
+    altText: normalizeAltText(raw.altText),
     notablePoints: Array.isArray(raw.notablePoints)
       ? (raw.notablePoints as Array<{ label?: string; region?: string }>).map((p) => ({
           label: String(p.label ?? ''),

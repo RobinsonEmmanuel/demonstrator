@@ -39,7 +39,7 @@ export default function ImageClassificationPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'all' | 'duplicates' | 'ranking'>('all');
+  const [activeSection, setActiveSection] = useState<'raw' | 'all' | 'duplicates' | 'ranking'>('raw');
 
   const previewById = useMemo(
     () => new Map(localImages.map((i) => [i.id, i.dataUrl])),
@@ -56,6 +56,7 @@ export default function ImageClassificationPage() {
     if (!files?.length) return;
     setError(null);
     setResult(null);
+    setActiveSection('raw');
 
     const batch: LocalImage[] = [];
     for (let i = 0; i < files.length && localImages.length + batch.length < MAX_FILES; i++) {
@@ -116,6 +117,7 @@ export default function ImageClassificationPage() {
     setResult(null);
     setSelectedId(null);
     setError(null);
+    setActiveSection('raw');
   };
 
   const rankedImages = useMemo(() => {
@@ -240,45 +242,37 @@ export default function ImageClassificationPage() {
             </div>
           )}
 
-          {localImages.length > 0 && !result && !analyzing && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {localImages.map((img) => (
-                <div key={img.id} className="aspect-square rounded-lg overflow-hidden border border-gray-200">
-                  <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-
           {analyzing && (
             <p className="text-sm text-gray-600 animate-pulse">
               Analyse vision, détection des doublons et scoring en cours (peut prendre 1–2 min)…
             </p>
           )}
 
-          {result && (
-            <>
-              {result.siglipMocked && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Mode mock SigLIP actif — les doublons visuels ne sont pas fiables. Définissez{' '}
-                  <code className="text-xs bg-amber-100 px-1 rounded">SIGLIP_SERVICE_URL</code>{' '}
-                  dans .env.local.
-                </div>
-              )}
+          {result?.siglipMocked && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Mode mock SigLIP actif — les doublons visuels ne sont pas fiables. Définissez{' '}
+              <code className="text-xs bg-amber-100 px-1 rounded">SIGLIP_SERVICE_URL</code>{' '}
+              dans .env.local.
+            </div>
+          )}
 
+          {localImages.length > 0 && (
+            <>
               <div className="flex gap-2 border-b border-gray-200">
                 {(
                   [
-                    ['all', 'Toutes'],
-                    ['duplicates', `Doublons (${result.duplicateGroups.length})`],
-                    ['ranking', 'Classement'],
+                    ['raw', `Photos brutes (${localImages.length})`, true],
+                    ['all', 'Photos analysées', !!result],
+                    ['duplicates', `Doublons${result ? ` (${result.duplicateGroups.length})` : ''}`, !!result],
+                    ['ranking', 'Classement', !!result],
                   ] as const
-                ).map(([key, label]) => (
+                ).map(([key, label, enabled]) => (
                   <button
                     key={key}
                     type="button"
+                    disabled={!enabled}
                     onClick={() => setActiveSection(key)}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+                    className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px disabled:cursor-not-allowed disabled:opacity-40 ${
                       activeSection === key
                         ? 'border-orange-500 text-orange-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -289,7 +283,25 @@ export default function ImageClassificationPage() {
                 ))}
               </div>
 
-              {activeSection === 'all' && (
+              {activeSection === 'raw' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {localImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className="overflow-hidden rounded-lg border border-gray-200 bg-white"
+                    >
+                      <div className="aspect-[4/3] bg-gray-100">
+                        <img src={img.dataUrl} alt="" className="h-full w-full object-cover" />
+                      </div>
+                      <p className="truncate px-2.5 py-2 text-xs text-gray-700" title={img.name}>
+                        {img.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {result && activeSection === 'all' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {result.images.map((img) => {
                     const url = previewById.get(img.id);
@@ -307,7 +319,7 @@ export default function ImageClassificationPage() {
                 </div>
               )}
 
-              {activeSection === 'duplicates' && (
+              {result && activeSection === 'duplicates' && (
                 <DuplicateGroupsSection
                   groups={result.duplicateGroups}
                   imagesById={imagesById}
@@ -317,7 +329,7 @@ export default function ImageClassificationPage() {
                 />
               )}
 
-              {activeSection === 'ranking' && (
+              {result && activeSection === 'ranking' && (
                 <ol className="space-y-2">
                   {rankedImages.map((img, idx) => {
                     const url = previewById.get(img.id);

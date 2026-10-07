@@ -9,6 +9,7 @@ import {
   listEmbeddingsForScope,
   upsertImageRecord,
 } from '@/lib/server/image-store';
+import { duplicateSimilarityThreshold } from '@/lib/server/image-embeddings';
 import { isMongoConfigured } from '@/lib/server/mongodb';
 import type { SimilarImageMatch } from '@/types/image-store';
 import type { ImageClassifyContext, UploadedImageInput } from '@/types/image-classify';
@@ -91,7 +92,7 @@ export async function indexImageBatch(
     const similar = useMongo
       ? await findSimilarImages(embedding, {
           topK: 20,
-          minScore: Number(process.env.SIMILARITY_MIN_SCORE ?? 0.82),
+          minScore: duplicateSimilarityThreshold(),
           excludeImageId: img.id,
           scopeImageIds: scopeIds,
         })

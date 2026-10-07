@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { Collection } from 'mongodb';
-import { cosineSimilarity } from '@/lib/server/image-embeddings';
+import { cosineSimilarity, duplicateSimilarityThreshold } from '@/lib/server/image-embeddings';
 import { getMongoDb } from '@/lib/server/mongodb';
 import type {
   SimilarImageMatch,
@@ -92,7 +92,7 @@ export async function findSimilarImages(
 ): Promise<SimilarImageMatch[]> {
   const {
     topK = 20,
-    minScore = 0.82,
+    minScore = duplicateSimilarityThreshold(),
     excludeImageId,
     batchId,
     poiId,
