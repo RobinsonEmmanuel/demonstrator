@@ -151,87 +151,92 @@ export default function ImageClassificationPage() {
         <div className="space-y-6">
           <WorkflowSteps phase={analyzing ? 'running' : result ? 'done' : 'idle'} />
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lieu (optionnel)
-              </label>
-              <input
-                type="text"
-                value={poiName}
-                onChange={(e) => setPoiName(e.target.value)}
-                placeholder="Ex. MuMa Le Havre"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
+          {/* Formulaire de dépôt : visible uniquement sur l'onglet « Photos brutes » */}
+          {activeSection === 'raw' && (
+            <>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lieu (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={poiName}
+                  onChange={(e) => setPoiName(e.target.value)}
+                  placeholder="Ex. MuMa Le Havre"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Destination (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="Ex. Le Havre"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Destination (optionnel)
-              </label>
+
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-400 transition-colors bg-gray-50/50"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                void addFiles(e.dataTransfer.files);
+              }}
+            >
+              <ArrowUpTrayIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-3">
+                Glissez vos images ici ou parcourez (max {MAX_FILES}, {MAX_MB} Mo / fichier)
+              </p>
               <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Ex. Le Havre"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => void addFiles(e.target.files)}
               />
-            </div>
-          </div>
-
-          <div
-            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-400 transition-colors bg-gray-50/50"
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              void addFiles(e.dataTransfer.files);
-            }}
-          >
-            <ArrowUpTrayIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 mb-3">
-              Glissez vos images ici ou parcourez (max {MAX_FILES}, {MAX_MB} Mo / fichier)
-            </p>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => void addFiles(e.target.files)}
-            />
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Choisir des fichiers
-            </button>
-            {localImages.length > 0 && (
-              <p className="mt-3 text-xs text-gray-500">{localImages.length} image(s) chargée(s)</p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={analyzing || localImages.length === 0}
-              className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
-            >
-              {analyzing ? 'Analyse en cours…' : 'Analyser les images'}
-            </button>
-            {localImages.length > 0 && (
               <button
                 type="button"
-                onClick={clearAll}
-                className="px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                onClick={() => inputRef.current?.click()}
+                className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Tout effacer
+                Choisir des fichiers
               </button>
-            )}
-          </div>
+              {localImages.length > 0 && (
+                <p className="mt-3 text-xs text-gray-500">{localImages.length} image(s) chargée(s)</p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={analyzing || localImages.length === 0}
+                className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+              >
+                {analyzing ? 'Analyse en cours…' : 'Analyser les images'}
+              </button>
+              {localImages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Tout effacer
+                </button>
+              )}
+            </div>
+            </>
+          )}
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
