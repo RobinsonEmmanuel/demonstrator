@@ -26,6 +26,11 @@ export function DuplicateGroupComparisonPanel({
   const imageIds = group.imageIds;
   const maxTotal = comparison.criteria.length * 10;
   const gridCols = `minmax(7rem, 9rem) repeat(${imageIds.length}, minmax(0, 1fr))`;
+  const decidingId = comparison.decidingCriterionId;
+  const decidingLabel =
+    comparison.criteria.find((c) => c.id === decidingId)?.label ??
+    (decidingId === 'technical' ? 'Qualité technique' : null);
+  const recName = imagesById.get(comparison.recommendedImageId)?.name;
 
   return (
     <div className="space-y-3">
@@ -33,6 +38,43 @@ export function DuplicateGroupComparisonPanel({
         <h4 className="text-sm font-semibold text-slate-900">Comparaison détaillée</h4>
         <p className="text-xs text-slate-600 mt-0.5">{comparison.headline}</p>
       </div>
+
+      {(comparison.tie || comparison.decidingSummary || comparison.equivalent) && (
+        <div
+          className={`rounded-lg border px-3 py-2.5 text-xs leading-relaxed ${
+            comparison.equivalent
+              ? 'border-slate-200 bg-slate-50 text-slate-700'
+              : 'border-amber-300 bg-amber-50 text-amber-950'
+          }`}
+        >
+          {comparison.equivalent ? (
+            <p>
+              <strong>Photos équivalentes.</strong> Aucune différence éditoriale réelle : la
+              première du groupe est retenue par défaut.
+            </p>
+          ) : (
+            <>
+              <p className="font-semibold">
+                {comparison.tie ? 'Notes à égalité — départagées sur ' : 'Critère décisif : '}
+                <span className="uppercase tracking-wide">
+                  {decidingLabel ?? 'comparaison visuelle'}
+                </span>
+              </p>
+              {comparison.decidingSummary && (
+                <p className="mt-0.5">
+                  {recName && <strong>{recName} : </strong>}
+                  {comparison.decidingSummary}
+                </p>
+              )}
+            </>
+          )}
+          {comparison.decidedBy === 'scores' && (
+            <p className="mt-1 text-[11px] text-slate-500">
+              Comparaison visuelle indisponible : départage sur les notes uniquement.
+            </p>
+          )}
+        </div>
+      )}
 
       <div
         className="hidden lg:grid gap-2 mb-2"
@@ -57,6 +99,15 @@ export function DuplicateGroupComparisonPanel({
               <p className="mt-1 text-[10px] font-medium text-slate-700 leading-tight line-clamp-2">
                 {img ? photoLabel(idx, img.name) : `Photo ${idx + 1}`}
               </p>
+              {comparison.tagsByImageId?.[id] && (
+                <p
+                  className={`mt-0.5 text-[10px] leading-tight ${
+                    isRec ? 'font-semibold text-orange-800' : 'text-slate-500'
+                  }`}
+                >
+                  {comparison.tagsByImageId[id]}
+                </p>
+              )}
               {isRec && (
                 <span className="inline-block mt-0.5 text-[9px] font-bold uppercase text-orange-700">
                   Retenue
@@ -88,8 +139,18 @@ export function DuplicateGroupComparisonPanel({
           })}
         </div>
 
-        {comparison.criteria.map((row) => (
-          <details key={row.id} className="group border-t border-slate-100 first:border-t-0">
+        {comparison.criteria.map((row) => {
+          const rowScores = imageIds.map((i) => row.scoresByImageId[i] ?? 0);
+          const allEqual = rowScores.every((v) => v === rowScores[0]);
+          const isDeciding = row.id === decidingId;
+          return (
+          <details
+            key={row.id}
+            open={isDeciding}
+            className={`group border-t border-slate-100 first:border-t-0 ${
+              isDeciding ? 'bg-amber-50/60 ring-1 ring-inset ring-amber-300' : ''
+            } ${allEqual && !isDeciding ? 'opacity-60' : ''}`}
+          >
             <summary className="cursor-pointer list-none hover:bg-slate-50/80 [&::-webkit-details-marker]:hidden">
               <div className="grid gap-px bg-slate-100 items-stretch" style={{ gridTemplateColumns: gridCols }}>
                 <div className="bg-white px-3 py-2.5 flex items-center gap-2">
@@ -97,12 +158,20 @@ export function DuplicateGroupComparisonPanel({
                     ▸
                   </span>
                   <span className="text-xs font-medium text-slate-800">{row.label}</span>
+                  {isDeciding && (
+                    <span className="rounded bg-amber-500 px-1 text-[9px] font-bold uppercase text-white">
+                      Décisif
+                    </span>
+                  )}
+                  {allEqual && !isDeciding && (
+                    <span className="text-[9px] uppercase text-slate-400">égalité</span>
+                  )}
                 </div>
                 {imageIds.map((id) => {
                   const score = row.scoresByImageId[id] ?? 0;
                   const isRec = id === comparison.recommendedImageId;
                   const best = Math.max(...imageIds.map((i) => row.scoresByImageId[i] ?? 0));
-                  const isBest = score === best;
+                  const isBest = score === best && !allEqual;
                   return (
                     <div
                       key={id}
@@ -136,7 +205,8 @@ export function DuplicateGroupComparisonPanel({
               })}
             </div>
           </details>
-        ))}
+          );
+        })}
 
         <div className="grid gap-px bg-slate-200 border-t border-slate-200 font-semibold" style={{ gridTemplateColumns: gridCols }}>
           <div className="bg-slate-100 px-3 py-2.5 text-xs text-slate-800">TOTAL</div>

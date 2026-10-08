@@ -94,11 +94,37 @@ export interface CriterionComparisonRow {
   justificationsByImageId: Record<string, string>;
 }
 
+export type GroupJudgementCriterion =
+  | 'composition'
+  | 'lighting'
+  | 'editorial_impact'
+  | 'subject_relevance'
+  | 'technical';
+
+/** Jugement comparatif des photos d'un groupe de doublons (vision, une requête par groupe). */
+export interface GroupJudgement {
+  winnerId: string;
+  /** Aucune différence éditoriale réelle : la première est retenue par défaut. */
+  equivalent: boolean;
+  decidingCriterion: GroupJudgementCriterion | null;
+  summary: string;
+  tagsByImageId: Record<string, string>;
+}
+
 export interface DuplicateGroupComparison {
   criteria: CriterionComparisonRow[];
   totalByImageId: Record<string, number>;
   recommendedImageId: string;
   headline: string;
+  /** Les notes chiffrées ne départagent pas les photos (totaux égaux). */
+  tie?: boolean;
+  /** Origine du choix : jugement comparatif des images ou simple somme des notes. */
+  decidedBy?: 'vision' | 'scores';
+  equivalent?: boolean;
+  decidingCriterionId?: GroupJudgementCriterion | null;
+  decidingSummary?: string;
+  /** Courte étiquette qualitative par photo (ex. « ciel dégagé, reflet net »). */
+  tagsByImageId?: Record<string, string>;
 }
 
 export interface DuplicateGroup {

@@ -2,6 +2,7 @@ import 'server-only';
 
 import { analyzeImageWithVision } from '@/lib/server/image-vision';
 import { clusterBySimilarity, duplicateSimilarityThreshold } from '@/lib/server/image-embeddings';
+import { judgeDuplicateGroup } from '@/lib/server/image-group-judge';
 import { buildGroupRecommendationRationale } from '@/lib/server/image-duplicate-rationale';
 import { buildDuplicateGroupComparison } from '@/lib/image-group-comparison';
 import { indexImageBatch, loadBatchEmbeddings } from '@/lib/server/image-siglip-index';
@@ -37,21 +38,38 @@ async function mapPool<T, R>(
   return results;
 }
 
+function groupScore(analysis: AnalyzedImageResult['analysis']): number[] {
+  const a = analysis.aesthetic;
+  return [
+    analysis.compliance.status === 'fail' ? 0 : 1,
+    a.overall,
+    a.composition + a.lighting + a.editorialImpact + a.subjectRelevance,
+    -analysis.technical.issues.length,
+    analysis.technical.sharpnessOk ? 1 : 0,
+  ];
+}
+
+/** Départage par scores : conformité, global, somme des critères, défauts techniques, netteté. */
 function pickBestInGroup(
   imageIds: string[],
   byId: Map<string, { analysis: AnalyzedImageResult['analysis'] }>
 ): string {
-  let best = imageIds[0];
-  let bestScore = -1;
+  const beats = (a: number[], b: number[]): boolean => {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return a[i] > b[i];
+    }
+    return false;
+  };
 
+  let best = imageIds[0];
+  let bestKey: number[] | null = null;
   for (const id of imageIds) {
     const img = byId.get(id);
     if (!img) continue;
-    const fail = img.analysis.compliance.status === 'fail';
-    const score = fail ? -1000 + img.analysis.aesthetic.overall : img.analysis.aesthetic.overall;
-    if (score > bestScore) {
-      bestScore = score;
+    const key = groupScore(img.analysis);
+    if (!bestKey || beats(key, bestKey)) {
       best = id;
+      bestKey = key;
     }
   }
   return best;
@@ -107,32 +125,64 @@ export async function runImageClassificationPipeline(
     ? `${thresholdPct} % (mock SigLIP — configurez SIGLIP_SERVICE_URL pour la similarité visuelle réelle)`
     : `${thresholdPct} % (similarité visuelle SigLIP)`;
 
+  const imagesById = new Map(images.map((i) => [i.id, i]));
+  const analyzedById = new Map(
+    analyzed.map((a) => [a.id, { id: a.id, name: a.name, analysis: a.analysis }])
+  );
+
   clusters.forEach((memberIds, idx) => {
     const groupId = `g${idx + 1}`;
     memberIds.forEach((id) => imageToGroup.set(id, groupId));
-
-    if (memberIds.length < 2) return;
-
-    const byId = new Map(
-      analyzed.map((a) => [a.id, { id: a.id, name: a.name, analysis: a.analysis }])
-    );
-    const recommended = pickBestInGroup(memberIds, byId);
-    const recommendationReason = buildGroupRecommendationRationale(
-      recommended,
-      memberIds,
-      byId
-    );
-    const comparison = buildDuplicateGroupComparison(memberIds, recommended, byId);
-
-    duplicateGroups.push({
-      id: groupId,
-      imageIds: memberIds,
-      recommendedImageId: recommended,
-      similarityNote: `${memberIds.length} visuels très proches (≥ ${similarityNoteBase})`,
-      recommendationReason,
-      comparison: comparison ?? undefined,
-    });
   });
+
+  // Jugement comparatif (vision) de chaque groupe de doublons, en parallèle.
+  const groupClusters = clusters
+    .map((memberIds, idx) => ({ memberIds, groupId: `g${idx + 1}` }))
+    .filter((c) => c.memberIds.length >= 2);
+
+  const groups = await Promise.all(
+    groupClusters.map(async ({ memberIds, groupId }) => {
+      const scoreWinner = pickBestInGroup(memberIds, analyzedById);
+      // Les images non conformes ne sont jamais soumises : le jugement ne doit pas les élire.
+      const candidates = memberIds.filter(
+        (id) => analyzedById.get(id)?.analysis.compliance.status !== 'fail'
+      );
+      const judged =
+        candidates.length >= 2
+          ? await judgeDuplicateGroup(
+              candidates
+                .map((id) => ({ id, dataUrl: imagesById.get(id)?.dataUrl ?? '' }))
+                .filter((m) => m.dataUrl),
+              context
+            )
+          : null;
+
+      // Gagnante du jugement visuel ; à défaut, départage par scores.
+      const recommended = judged ? judged.winnerId : scoreWinner;
+      const recommendationReason = buildGroupRecommendationRationale(
+        recommended,
+        memberIds,
+        analyzedById,
+        judged
+      );
+      const comparison = buildDuplicateGroupComparison(
+        memberIds,
+        recommended,
+        analyzedById,
+        judged
+      );
+
+      return {
+        id: groupId,
+        imageIds: memberIds,
+        recommendedImageId: recommended,
+        similarityNote: `${memberIds.length} visuels très proches (≥ ${similarityNoteBase})`,
+        recommendationReason,
+        comparison: comparison ?? undefined,
+      } satisfies DuplicateGroup;
+    })
+  );
+  duplicateGroups.push(...groups);
 
   const ranked = [...analyzed].sort((a, b) => {
     const failA = a.analysis.compliance.status === 'fail';

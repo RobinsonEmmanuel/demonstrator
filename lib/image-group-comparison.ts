@@ -1,6 +1,7 @@
 import type {
   CriterionComparisonRow,
   DuplicateGroupComparison,
+  GroupJudgement,
   ImageAnalysis,
 } from '@/types/image-classify';
 
@@ -72,7 +73,8 @@ function justifyEditorial(row: ImageRow): string {
 export function buildDuplicateGroupComparison(
   memberIds: string[],
   recommendedImageId: string,
-  byId: Map<string, ImageRow>
+  byId: Map<string, ImageRow>,
+  judgement?: GroupJudgement | null
 ): DuplicateGroupComparison | null {
   const rows = memberIds.map((id) => byId.get(id)).filter((x): x is ImageRow => !!x);
   if (rows.length < 2) return null;
@@ -139,11 +141,38 @@ export function buildDuplicateGroupComparison(
   const maxTotal = criteria.length * 10;
   const recName = byId.get(recommendedImageId)?.name ?? 'Image recommandée';
   const recTotal = totalByImageId[recommendedImageId] ?? 0;
+  const bestOtherTotal = Math.max(
+    ...rows.filter((r) => r.id !== recommendedImageId).map((r) => totalByImageId[r.id] ?? 0)
+  );
+  const tie = recTotal <= bestOtherTotal;
+
+  const criterionLabel: Record<string, string> = {
+    composition: 'composition',
+    lighting: 'lumière et atmosphère',
+    editorial_impact: 'impact éditorial',
+    subject_relevance: 'pertinence du sujet',
+    technical: 'qualité technique',
+  };
+
+  let headline = `${recName} — ${recTotal}/${maxTotal} (meilleur total du groupe)`;
+  if (judgement?.equivalent) {
+    headline = `${recName} — photos équivalentes, première retenue par défaut`;
+  } else if (tie && judgement?.decidingCriterion) {
+    headline = `${recName} — notes à égalité, départagée sur ${criterionLabel[judgement.decidingCriterion]}`;
+  } else if (tie) {
+    headline = `${recName} — notes à égalité (${recTotal}/${maxTotal})`;
+  }
 
   return {
     criteria,
     totalByImageId,
     recommendedImageId,
-    headline: `${recName} — ${recTotal}/${maxTotal} (meilleur total du groupe)`,
+    headline,
+    tie,
+    decidedBy: judgement ? 'vision' : 'scores',
+    equivalent: judgement?.equivalent ?? false,
+    decidingCriterionId: judgement?.decidingCriterion ?? null,
+    decidingSummary: judgement?.summary || undefined,
+    tagsByImageId: judgement?.tagsByImageId,
   };
 }
