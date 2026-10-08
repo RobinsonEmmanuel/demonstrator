@@ -144,9 +144,18 @@ export async function runImageClassificationPipeline(
     groupClusters.map(async ({ memberIds, groupId }) => {
       const scoreWinner = pickBestInGroup(memberIds, analyzedById);
       // Les images non conformes ne sont jamais soumises : le jugement ne doit pas les élire.
-      const candidates = memberIds.filter(
+      const compliant = memberIds.filter(
         (id) => analyzedById.get(id)?.analysis.compliance.status !== 'fail'
       );
+      // Le jugement visuel ne fait que DÉPARTAGER les ex æquo : il ne peut pas contredire
+      // le tableau de notes affiché (total des 4 critères). Seules les photos au meilleur
+      // total sont soumises ; si une seule émerge, elle gagne sans appel au juge.
+      const totalOf = (id: string): number => {
+        const a = analyzedById.get(id)?.analysis.aesthetic;
+        return a ? a.composition + a.lighting + a.editorialImpact + a.subjectRelevance : 0;
+      };
+      const bestTotal = Math.max(...compliant.map(totalOf));
+      const candidates = compliant.filter((id) => totalOf(id) === bestTotal);
       const judged =
         candidates.length >= 2
           ? await judgeDuplicateGroup(
@@ -158,7 +167,8 @@ export async function runImageClassificationPipeline(
           : null;
 
       // Gagnante du jugement visuel ; à défaut, départage par scores.
-      const recommended = judged ? judged.winnerId : scoreWinner;
+      const recommended =
+        judged ? judged.winnerId : candidates.length === 1 ? candidates[0] : scoreWinner;
       const recommendationReason = buildGroupRecommendationRationale(
         recommended,
         memberIds,
