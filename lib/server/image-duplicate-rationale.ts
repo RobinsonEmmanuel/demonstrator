@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { ImageAnalysis } from '@/types/image-classify';
+import type { GroupJudgement, ImageAnalysis } from '@/types/image-classify';
 
 const AESTHETIC_LABELS: Record<keyof ImageAnalysis['aesthetic'], string> = {
   composition: 'cadrage',
@@ -58,10 +58,18 @@ function strongestDimensions(rec: ImageAnalysis, others: ImageRow[]): string[] {
 export function buildGroupRecommendationRationale(
   recommendedId: string,
   memberIds: string[],
-  byId: Map<string, ImageRow>
+  byId: Map<string, ImageRow>,
+  judgement?: GroupJudgement | null
 ): string {
   const rec = byId.get(recommendedId);
   if (!rec || memberIds.length < 2) return '';
+
+  if (judgement?.equivalent) {
+    return `**${rec.name}** est retenue par défaut : les photos du groupe sont éditorialement équivalentes.`;
+  }
+  if (judgement?.summary && judgement.winnerId === recommendedId) {
+    return `**${rec.name}** est retenue : ${judgement.summary.replace(/^[A-ZÉ]/, (c) => c.toLowerCase()).replace(/\.$/, '')}.`;
+  }
 
   const others = memberIds
     .filter((id) => id !== recommendedId)
